@@ -1,0 +1,30 @@
+---
+title: "Northampton Bike Stress Map"
+format:
+  html:
+    embed-resources: true
+execute:
+  warning: false
+  error: false
+  message: false
+  echo: false
+---
+
+```{r}
+source("ExploreStress.R", echo=FALSE)
+
+library(leaflet.extras)
+```
+
+This map shows Level of Traffic Stress (LTS) for bicycling, and Potential for Everyday Biking.
+
+```{r}
+map |> 
+  addFullscreenControl()
+```
+
+Map data: OpenStreetMap, MassGIS \| Analysis & mapping: Kent S Johnson
+
+[Level of Traffic Stress](https://peterfurth.sites.northeastern.edu/2014/05/21/criteria-for-level-of-traffic-stress/)
+
+[Potential for Everyday Biking](https://geo-massdot.opendata.arcgis.com/datasets/MassDOT::potential-for-everyday-biking-2022-update-2/about)
