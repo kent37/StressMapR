@@ -17,7 +17,7 @@ source("ExploreStress.R", echo=FALSE)
 library(leaflet.extras)
 ```
 
-This map shows Level of Traffic Stress (LTS) for bicycling, and Potential for Everyday Biking.
+This map shows Level of Traffic Stress (LTS) for bicycling, Potential for Everyday Biking, and 5, 12, and 20-minute isochrones from downtown Northampton and Florence.
 
 ```{r}
 map |> 

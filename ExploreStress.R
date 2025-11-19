@@ -12,6 +12,9 @@ potential <- read_sf("../StressMap/plots/Northampton_LTS.gpkg",
   st_zm() |> # Drop M dimension
   st_transform(st_crs(stress))
 
+isochrones <- read_sf(here::here('isochrones.gpkg'), 
+         layer='isochrones')
+
 # Define color mapping for Potential values
 potential_colors <- list(
   "High" = "#1a9641",
@@ -25,6 +28,16 @@ lts_colors <- list(
   "2" = "#a4fc3c",
   "3" = "#fb7e21",
   "4" = "#c50605"
+)
+
+iso_colors <- list(
+  "Northampton" = 'blue',
+  "Florence" = 'blue'
+)
+
+iso_dashes <- list(
+  "Northampton" = NULL,
+  "Florence" = "4"
 )
 
 # Define emoji mapping for LTS values
@@ -63,6 +76,24 @@ for (potential_value in c("High", "Medium", "Low")) {
   }
 }
 
+# Add isochrones
+for (center_value in c("Northampton", "Florence")) {
+  iso_data <- isochrones %>% filter(center == center_value)
+
+  if (nrow(potential_data) > 0) {
+    map <- map %>%
+      addPolygons(
+        data = iso_data,
+        color = iso_colors[[center_value]],
+        dashArray = iso_dashes[[center_value]],
+        weight = 3,
+        opacity = 0.8,
+        fill = FALSE,
+        group = paste("Iso:", center_value)
+      )
+  }
+}
+
 # Add each LTS value as a separate layer
 for (lts_value in 1:4) {
   lts_data <- stress %>% filter(LTS == lts_value)
@@ -94,10 +125,13 @@ for (lts_value in 1:4) {
 map <- map %>%
   addLayersControl(
     overlayGroups = c("Potential: High", "Potential: Medium", "Potential: Low",
+                      "Iso: Northampton", "Iso: Florence",
                       "LTS 1", "LTS 2", "LTS 3", "LTS 4"),
     options = layersControlOptions(collapsed = FALSE)
   ) %>%
-  hideGroup(c("Potential: Medium", "Potential: Low", "LTS 1", "LTS 2"))
+  hideGroup(c("Potential: Medium", "Potential: Low",
+              "Iso: Florence", 
+              "LTS 1", "LTS 2"))
 
 # Display the map
 
