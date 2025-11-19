@@ -3,6 +3,7 @@ title: "Northampton Bike Stress Map"
 format:
   html:
     embed-resources: true
+    link-external-newwindow: true
 execute:
   warning: false
   error: false
