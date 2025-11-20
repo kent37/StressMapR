@@ -31,8 +31,8 @@ lts_colors <- list(
 )
 
 iso_colors <- list(
-  "Northampton" = 'darkslateblue',
-  "Florence" = 'slateblue'
+  "Northampton" = '#483D8B',
+  "Florence" = '#7B68EE'
 )
 
 iso_dashes <- list(
