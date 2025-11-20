@@ -31,8 +31,8 @@ lts_colors <- list(
 )
 
 iso_colors <- list(
-  "Northampton" = 'blue',
-  "Florence" = 'blue'
+  "Northampton" = 'darkslateblue',
+  "Florence" = 'slateblue'
 )
 
 iso_dashes <- list(
@@ -58,7 +58,7 @@ stress_labels <- list(
 
 # Create leaflet map
 map <- leaflet(width='796px', height='700px') %>%
-  addTiles()
+    addProviderTiles('Stadia.StamenTonerLite', group='Street')
 
 # Add each Potential value as a separate layer
 for (potential_value in c("High", "Medium", "Low")) {
@@ -133,6 +133,16 @@ map <- map %>%
               "Iso: Florence", 
               "LTS 1", "LTS 2"))
 
+# Legend
+map = map |> 
+  addLegend(
+    position = "bottomright",
+    opacity = 1,
+    colors = c(potential_colors, '', iso_colors, '', lts_colors),
+    labels = c(paste('Potential:', names(potential_colors)), '',
+               paste('Iso:', names(iso_colors)), '',
+               paste('LTS:', names(lts_colors)))
+  )
 # Display the map
 
 #map
