@@ -1,6 +1,7 @@
 # Load required libraries
 library(tidyverse)
 library(leaflet)
+library(leafem)
 library(sf)
 
 # Load the StressMap and Potential for everyday biking data
@@ -56,9 +57,13 @@ stress_labels <- list(
   "4" = "Very High Stress"
 )
 
+# Actual routes
+biking_actual_path = here::here("../Noho/Biking potential/Biking potential transparent geo.tif")
+biking_actual = terra::rast(biking_actual_path)
+
 # Create leaflet map
 map <- leaflet(width='796px', height='700px') %>%
-    addProviderTiles('Stadia.StamenTonerLite', group='Street')
+    addProviderTiles('CartoDB.Positron', group='Street')
 
 # Add each Potential value as a separate layer
 for (potential_value in c("High", "Medium", "Low")) {
@@ -121,15 +126,39 @@ for (lts_value in 1:4) {
   }
 }
 
+# Custom pixel value function needed to get the alpha and color to 
+# render properly. See
+# https://github.com/GeoTIFF/georaster-layer-for-leaflet/issues/36
+# https://github.com/r-spatial/leafem/issues/25
+pixelValueFunction = htmlwidgets::JS(
+  "
+    pixelValuesToColorFn = (values) => {
+      //if (values[0]>0)
+        //debugger;
+      return `rgba(${values[0]}, ${values[1]}, ${values[2]}, ${(values[3]/255).toFixed(2)})`;
+    };
+  "
+)
+
+map = map |> 
+  #addMapPane('above', zIndex=450) |> 
+  addGeotiff(biking_actual_path, bands=1:4, opacity=1,
+             group='Actual',
+             resolution=256, imagequery=FALSE,
+             #options=tileOptions(pane='above'),
+             pixelValuesToColorFn=pixelValueFunction)
+
 # Add layer control and set initial visibility
 map <- map %>%
   addLayersControl(
     overlayGroups = c("Potential: High", "Potential: Medium", "Potential: Low",
+                      "Actual",
                       "Iso: Northampton", "Iso: Florence",
                       "LTS 1", "LTS 2", "LTS 3", "LTS 4"),
     options = layersControlOptions(collapsed = FALSE)
   ) %>%
   hideGroup(c("Potential: Medium", "Potential: Low",
+              "Actual",
               "Iso: Florence", 
               "LTS 1", "LTS 2"))
 
