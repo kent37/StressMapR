@@ -32,13 +32,15 @@ lts_colors <- list(
 )
 
 iso_colors <- list(
-  "Northampton" = '#483D8B',
+#  "Northampton" = '#483D8B',
+  "Northampton" = '#7B68EE',
   "Florence" = '#7B68EE'
 )
 
 iso_dashes <- list(
-  "Northampton" = NULL,
-  "Florence" = "4"
+#  "Northampton" = "5 4 1 4 ",
+  "Northampton" = "4 4 ",
+  "Florence" = "4 4"
 )
 
 # Define emoji mapping for LTS values
@@ -81,24 +83,6 @@ for (potential_value in c("High", "Medium", "Low")) {
   }
 }
 
-# Add isochrones
-for (center_value in c("Northampton", "Florence")) {
-  iso_data <- isochrones %>% filter(center == center_value)
-
-  if (nrow(potential_data) > 0) {
-    map <- map %>%
-      addPolygons(
-        data = iso_data,
-        color = iso_colors[[center_value]],
-        dashArray = iso_dashes[[center_value]],
-        weight = 3,
-        opacity = 0.8,
-        fill = FALSE,
-        group = paste("Iso:", center_value)
-      )
-  }
-}
-
 # Add each LTS value as a separate layer
 for (lts_value in 1:4) {
   lts_data <- stress %>% filter(LTS == lts_value)
@@ -120,8 +104,27 @@ for (lts_value in 1:4) {
         color = unname(lts_colors[[as.character(lts_value)]]),
         weight = 3,
         opacity = 0.8,
-        group = paste("LTS", lts_value),
+        group = unname(stress_labels[[as.character(lts_value)]]),
         label = lapply(list(label_html), htmltools::HTML)
+      )
+  }
+}
+
+# Add isochrones
+for (center_value in c("Northampton", "Florence")) {
+  iso_data <- isochrones %>% filter(center == center_value)
+
+  if (nrow(potential_data) > 0) {
+    map <- map %>%
+      addPolygons(
+        data = iso_data,
+        color = iso_colors[[center_value]],
+        dashArray = iso_dashes[[center_value]],
+        weight = 1,
+        opacity = 0.8,
+        fillOpacity = 0.08,
+        fill = TRUE,
+        group = paste("Iso:", center_value)
       )
   }
 }
@@ -154,13 +157,13 @@ map <- map %>%
     overlayGroups = c("Potential: High", "Potential: Medium", "Potential: Low",
                       "Actual",
                       "Iso: Northampton", "Iso: Florence",
-                      "LTS 1", "LTS 2", "LTS 3", "LTS 4"),
+                      unname(unlist(stress_labels))),
     options = layersControlOptions(collapsed = FALSE)
   ) %>%
   hideGroup(c("Potential: Medium", "Potential: Low",
               "Actual",
               "Iso: Florence", 
-              "LTS 1", "LTS 2"))
+              "Low Stress", "Moderate Stress"))
 
 # Legend
 map = map |> 
@@ -170,7 +173,7 @@ map = map |>
     colors = c(potential_colors, '', iso_colors, '', lts_colors),
     labels = c(paste('Potential:', names(potential_colors)), '',
                paste('Iso:', names(iso_colors)), '',
-               paste('LTS:', names(lts_colors)))
+               unname(unlist(stress_labels)))
   )
 # Display the map
 
