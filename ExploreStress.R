@@ -65,7 +65,7 @@ biking_actual_path = here::here("../Noho/Biking potential/Biking potential trans
 biking_actual = terra::rast(biking_actual_path)
 
 # Create leaflet map
-map <- leaflet(width='796px', height='700px') %>%
+map <- leaflet(width='100%', height='100vh') %>%
     addProviderTiles('CartoDB.Positron', group='Street')
 
 # Add Potential layer with continuous viridis coloring
