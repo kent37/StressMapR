@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(ogrinfo:*)",
+      "Bash(gdalinfo:*)",
+      "mcp__r-btw__btw_tool_env_describe_data_frame",
+      "mcp__r-btw__btw_tool_env_describe_environment",
+      "mcp__r-btw__list_r_sessions",
+      "mcp__r-btw__select_r_session"
+    ]
+  }
+}

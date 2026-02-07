@@ -16,11 +16,12 @@ potential <- read_sf("../StressMap/plots/Northampton_LTS.gpkg",
 isochrones <- read_sf(here::here('isochrones.gpkg'), 
          layer='isochrones')
 
-# Define color mapping for Potential values
-potential_colors <- list(
-  "High" = "#1a9641",
-  "Medium" = "#f0de11",
-  "Low" = "#f0111f"
+# Define color mapping for Potential values (continuous viridis palette)
+# Use quantile-based coloring to handle skewed distribution
+potential_pal <- colorQuantile(
+  palette = "viridis",
+  domain = potential$biking_pot,
+  n = 10  # Divide into 10 quantile bins
 )
 
 # Define color mapping for LTS values
@@ -67,21 +68,16 @@ biking_actual = terra::rast(biking_actual_path)
 map <- leaflet(width='796px', height='700px') %>%
     addProviderTiles('CartoDB.Positron', group='Street')
 
-# Add each Potential value as a separate layer
-for (potential_value in c("High", "Medium", "Low")) {
-  potential_data <- potential %>% filter(Potential == potential_value)
-
-  if (nrow(potential_data) > 0) {
-    map <- map %>%
-      addPolylines(
-        data = potential_data,
-        color = potential_colors[[potential_value]],
-        weight = 6,
-        opacity = 0.8,
-        group = paste("Potential:", potential_value)
-      )
-  }
-}
+# Add Potential layer with continuous viridis coloring
+map <- map %>%
+  addPolylines(
+    data = potential,
+    color = ~potential_pal(biking_pot),
+    weight = 6,
+    opacity = 0.8,
+    group = "Potential for Everyday Biking",
+    label = ~paste0("Biking Potential: ", round(biking_pot, 3))
+  )
 
 # Add each LTS value as a separate layer
 for (lts_value in 1:4) {
@@ -114,19 +110,17 @@ for (lts_value in 1:4) {
 for (center_value in c("Northampton", "Florence")) {
   iso_data <- isochrones %>% filter(center == center_value)
 
-  if (nrow(potential_data) > 0) {
-    map <- map %>%
-      addPolygons(
-        data = iso_data,
-        color = iso_colors[[center_value]],
-        dashArray = iso_dashes[[center_value]],
-        weight = 1,
-        opacity = 0.8,
-        fillOpacity = 0.08,
-        fill = TRUE,
-        group = paste("Iso:", center_value)
-      )
-  }
+  map <- map %>%
+    addPolygons(
+      data = iso_data,
+      color = iso_colors[[center_value]],
+      dashArray = iso_dashes[[center_value]],
+      weight = 1,
+      opacity = 0.8,
+      fillOpacity = 0.08,
+      fill = TRUE,
+      group = paste("Iso:", center_value)
+    )
 }
 
 # Custom pixel value function needed to get the alpha and color to 
@@ -154,25 +148,30 @@ map = map |>
 # Add layer control and set initial visibility
 map <- map %>%
   addLayersControl(
-    overlayGroups = c("Potential: High", "Potential: Medium", "Potential: Low",
+    overlayGroups = c("Potential for Everyday Biking",
                       "Actual",
                       "Iso: Northampton", "Iso: Florence",
                       unname(unlist(stress_labels))),
     options = layersControlOptions(collapsed = FALSE)
   ) %>%
-  hideGroup(c("Potential: Medium", "Potential: Low",
-              "Actual",
-              "Iso: Florence", 
+  hideGroup(c("Actual",
+              "Iso: Florence",
               "Low Stress", "Moderate Stress"))
 
 # Legend
-map = map |> 
+map = map |>
+  addLegend(
+    position = "bottomright",
+    pal = potential_pal,
+    values = potential$biking_pot,
+    title = "Biking Potential",
+    opacity = 1
+  ) |>
   addLegend(
     position = "bottomright",
     opacity = 1,
-    colors = c(potential_colors, '', iso_colors, '', lts_colors),
-    labels = c(paste('Potential:', names(potential_colors)), '',
-               paste('Iso:', names(iso_colors)), '',
+    colors = c(iso_colors, '', lts_colors),
+    labels = c(paste('Iso:', names(iso_colors)), '',
                unname(unlist(stress_labels)))
   )
 # Display the map
