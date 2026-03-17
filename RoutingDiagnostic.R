@@ -1,5 +1,5 @@
 
-# Diagnostic for error "20 OD-pairs have zero or non-finite flow values and will be skipped..."
+# Diagnostic for error "xx OD-pairs have zero or non-finite flow values and will be skipped..."
 library(igraph)
 
 # Build the same igraph run_assignment uses internally
@@ -8,9 +8,11 @@ components <- components(g)
 
 # Which od_matrix nodes are not in the giant component?
 giant <- which(components$membership == which.max(components$csize))
-problem_nodes <- od_matrix |> 
-    filter(!from %in% giant | !to %in% giant) |>
-    (\(x) unique(c(x$from, x$to)))()  
+giant_nodes <- as.integer(names(giant))
+problem_nodes <- od_matrix |>
+    filter(!from %in% giant_nodes | !to %in% giant_nodes) |>
+    (\(x) unique(c(x$from, x$to)))() |>
+    (\(x) x[!x %in% giant_nodes])()  
 
 # Street segments connected to isolated nodes 
 isolated_edges <- stress |>                               
@@ -23,6 +25,27 @@ affected_hexes   <- hex_centers    |> filter(hex_node    %in% problem_nodes)
 affected_schools <- public_schools |> filter(school_node %in% problem_nodes)
 
 mapview(isolated_edges, color = "red", lwd = 3,  layer.name = "Isolated segments") +
-mapview(affected_hexes, col.regions = "orange", layer.name = "Affected hex centroids") +
-mapview(affected_schools, col.regions = "blue",  layer.name = "Affected schools")
-sum(affected_hexes$people_count) #157
+mapview(affected_hexes, col.regions = "orange", layer.name = "Affected hex centroids")
+sum(affected_hexes$people_count) #7
+
+# Map all street segments colored by connected component
+giant_comp <- which.max(components$csize)
+
+stress_components <- stress_graph |>
+  mutate(comp = components$membership[match(from, as.integer(V(g)$name))],
+         comp_label = if_else(comp == giant_comp, "Giant", paste0("C", comp))) |>
+  left_join(stress |> select(id, geom), by = "id") |>
+  st_as_sf()
+
+small_labels <- sort(unique(stress_components$comp_label[stress_components$comp_label != "Giant"]))
+n_small      <- length(small_labels)
+small_colors <- RColorBrewer::brewer.pal(max(3, min(n_small, 12)), "Set3") |>
+  rep_len(n_small)
+comp_colors  <- c(small_colors, "#aaaaaa") |>
+  setNames(c(small_labels, "Giant"))
+
+mapview(stress_components |> filter(comp_label == "Giant"),
+        color = "#aaaaaa", lwd = 2, layer.name = "Giant component") +
+mapview(stress_components |> filter(comp_label != "Giant"),
+        zcol = "comp_label", color = small_colors,
+        lwd = 2, layer.name = "Small components")

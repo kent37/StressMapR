@@ -91,19 +91,19 @@ mapview(pop_by_hex |> filter(density >= 4000), zcol='density') +
           lwd=0)
 
 
-schools_raw <- fromJSON(here::here("data/schools.json"))$elements |>
-  as_tibble()
+# schools_raw <- fromJSON(here::here("data/schools.json"))$elements |>
+#   as_tibble()
 
-schools = schools_raw |>
-  mutate(
-    lat = coalesce(lat, center$lat),
-    lon = coalesce(lon, center$lon),
-    name = tags$name
-  ) |>
-  select(type, id, lat, lon, name) |> 
-  st_as_sf(coords=c('lon', 'lat'), crs=4326)
+# schools = schools_raw |>
+#   mutate(
+#     lat = coalesce(lat, center$lat),
+#     lon = coalesce(lon, center$lon),
+#     name = tags$name
+#   ) |>
+#   select(type, id, lat, lon, name) |> 
+#   st_as_sf(coords=c('lon', 'lat'), crs=4326)
 # Allow editing of the schools to put the location near the entrances
-st_write(schools, here::here('data/schools.gpkg'))
+#st_write(schools, here::here('data/schools.gpkg'))
 schools = st_read(here::here('data/schools.gpkg'))
 
 mapview(schools, zcol='name')
@@ -130,7 +130,7 @@ population |>
   summarize(people_count=sum(people_count), .by=Name)
 
 # Make a street graph from the stress data (undirected)
-stress_graph <- linestrings_to_graph(stress, digits = NA,
+stress_graph <- linestrings_to_graph(stress, digits = 4,
                                      keep.cols = c('id', 'name', 'LTS'))
 stress_graph <- create_undirected_graph(stress_graph, by='LTS')
 # .length column is computed by linestrings_to_graph by default
@@ -215,7 +215,9 @@ result_unweighted <- run_assignment(
   stress_graph,
   od_matrix,
   cost.column = ".length",
-  method = "PSL",
+  method = "AoN",
+  #nthreads=6, # Broken in R 4.5.3 vs 4.5.0
+  return.extra='all',
   verbose = TRUE
 )
 
@@ -248,7 +250,9 @@ result_lts <- run_assignment(
   stress_graph,
   od_matrix,
   cost.column = "lts_cost",
-  method = "PSL",
+  method = "AoN",
+#  nthreads=6,
+  return.extra='all',
   verbose = TRUE
 )
 
@@ -262,19 +266,22 @@ stress_with_flows <- stress_with_flows |>
   ) |>
   mutate(flow_delta = flow_lts - flow_unweighted)
 
-# Routes avoiding high-stress
+# Routes chosen while avoiding high-stress
 mapview(
-  stress_with_flows |> filter(flow_unweighted > 0),
+  stress_with_flows |> filter(flow_lts > 0),
   zcol       = "flow_lts",
   lwd        = 3,
   layer.name = "Weighted flow"
 )
 
-# How much flow is sill on high stress streets, even wit high avoidance?
+# How much flow is sill on high stress streets, even with high avoidance?
+high_stress_flows = stress_with_flows |> filter(flow_lts > 0, LTS >=3)
 mapview(
-  stress_with_flows |> filter(flow_unweighted > 0, LTS >=3),
+  high_stress_flows,
   zcol       = "flow_lts",
   lwd        = 3,
+  at = classIntervals(high_stress_flows$flow_lts, n = 8, style = "quantile")$brks,
+
   layer.name = "Unavoidable stress"
 )
 
@@ -298,3 +305,24 @@ mapview(
   lwd        = 3,
   layer.name = "Flow change with stress-avoidance"
 )
+
+# High avoidance: segments avoided due to stress (negative delta only)
+neg_data   <- stress_with_flows |> filter(!is.na(flow_delta), flow_delta < 0)
+neg_breaks <- pretty(neg_data$flow_delta, n = 8)
+neg_colors <- colorRampPalette(c("#d73027", "#ffffbf"))(length(neg_breaks))
+mapview(
+  neg_data,
+  zcol       = "flow_delta",
+  at         = neg_breaks,
+  color      = neg_colors,
+  lwd        = 3,
+  layer.name = "High avoidance"
+)
+
+# Segments that are either highly avoided or unavoidable
+candidates = stress_with_flows |> 
+  filter(flow_delta < 0 | (flow_lts > 0 & LTS >=3)) |> 
+  mutate(score = pmax(-flow_delta, flow_lts))
+mapview(candidates |> filter(score>15000), zcol='score')
+ggplot(candidates) +
+  geom_histogram(aes(score))
