@@ -323,6 +323,55 @@ mapview(
 candidates = stress_with_flows |> 
   filter(flow_delta < 0 | (flow_lts > 0 & LTS >=3)) |> 
   mutate(score = pmax(-flow_delta, flow_lts))
-mapview(candidates |> filter(score>15000), zcol='score')
+mapview(candidates |> filter(score>15000), zcol='score',
+        layer.name='Avoided or unavoidable')
 ggplot(candidates) +
   geom_histogram(aes(score))
+
+
+# Compare path lengths 
+unweighted_lengths <- result_unweighted$path_costs
+
+seg_lengths <- as.numeric(stress_graph$.length)
+
+lts_lengths <- map_dbl(result_lts$paths, \(segs) sum(seg_lengths[segs]))
+
+detour_lengths <- lts_lengths - unweighted_lengths
+
+tibble(
+  unweighted = unweighted_lengths,
+  lts        = lts_lengths,
+  diff       = detour_lengths) |>
+  ggplot() +
+  geom_histogram(aes(diff))
+
+# Segment-level detour burden: for each segment avoided by the LTS router,
+# sum the detour distance across all OD pairs that avoided it.
+# - setdiff(unw, lts) finds segments in the unweighted path that were dropped
+#   by the LTS router (i.e., avoided due to stress)
+# - Each avoided segment gets the full detour length for that OD pair added
+#   to its burden — so detour_burden answers "how much total extra distance
+#   do people ride because of this segment?"
+# - Only OD pairs with a positive detour contribute
+# The segments with the highest detour_burden are the best infrastructure
+# candidates — improving them would eliminate the most collective detour.
+avoided_df <- pmap(
+  list(result_unweighted$paths, result_lts$paths, detour_lengths),
+  \(unw, lts, detour) {
+    avoided_segs <- setdiff(unw, lts)
+    if (length(avoided_segs) == 0 || detour <= 0) return(NULL)
+    tibble(seg_row = avoided_segs, detour = detour)
+  }
+) |>
+  list_rbind()
+
+seg_detour_burden <- avoided_df |>
+  summarise(detour_burden = sum(detour), .by = seg_row)
+
+stress_detour <- stress_graph |>
+  mutate(seg_row = row_number()) |>
+  inner_join(seg_detour_burden, by = "seg_row") |>
+  left_join(stress |> select(id, geom), by = "id") |>
+  st_as_sf()
+
+mapview(stress_detour, zcol = "detour_burden", lwd = 3, layer.name = "Detour burden")

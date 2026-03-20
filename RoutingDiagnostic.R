@@ -49,3 +49,16 @@ mapview(stress_components |> filter(comp_label == "Giant"),
 mapview(stress_components |> filter(comp_label != "Giant"),
         zcol = "comp_label", color = small_colors,
         lwd = 2, layer.name = "Small components")
+
+# Verify that path_costs equals sum of .length for each path's segments.
+# paths[[i]] contains row indices into stress_graph; path_costs[i] is the
+# total cost (sum of .length) that run_assignment computed for that path.
+seg_lengths <- as.numeric(stress_graph$.length)
+
+path_length_sums <- 
+  map_dbl(result_unweighted$paths, \(segs) sum(seg_lengths[segs]))
+
+diff <- path_length_sums - result_unweighted$path_costs
+cat("Paths checked:         ", length(diff), "\n")
+cat("Max absolute diff (m): ", max(abs(diff)), "\n")
+cat("All match (tol 1e-6):  ", all(abs(diff) < 1e-6), "\n")
