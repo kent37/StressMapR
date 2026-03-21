@@ -216,7 +216,7 @@ result_unweighted <- run_assignment(
   od_matrix,
   cost.column = ".length",
   method = "AoN",
-  #nthreads=6, # Broken in R 4.5.3 vs 4.5.0
+  nthreads=6, # Broken in R 4.5.3 vs 4.5.0 for PSL
   return.extra='all',
   verbose = TRUE
 )
@@ -251,7 +251,7 @@ result_lts <- run_assignment(
   od_matrix,
   cost.column = "lts_cost",
   method = "AoN",
-#  nthreads=6,
+  nthreads=6,
   return.extra='all',
   verbose = TRUE
 )
@@ -324,7 +324,9 @@ candidates = stress_with_flows |>
   filter(flow_delta < 0 | (flow_lts > 0 & LTS >=3)) |> 
   mutate(score = pmax(-flow_delta, flow_lts))
 mapview(candidates |> filter(score>15000), zcol='score',
-        layer.name='Avoided or unavoidable')
+        layer.name='Avoided or unavoidable') +
+mapview(public_schools,     col.regions = "red",       cex = 6, layer.name = "Schools") +
+mapview(destinations,       col.regions = "green",     cex = 6, layer.name = "Destinations")
 ggplot(candidates) +
   geom_histogram(aes(score))
 
@@ -374,4 +376,4 @@ stress_detour <- stress_graph |>
   left_join(stress |> select(id, geom), by = "id") |>
   st_as_sf()
 
-mapview(stress_detour, zcol = "detour_burden", lwd = 3, layer.name = "Detour burden")
+mapview(stress_detour |> filter(detour_burden>=1000000), zcol = "detour_burden", lwd = 3, layer.name = "Detour burden")
