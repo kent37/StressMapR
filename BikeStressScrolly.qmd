@@ -1,0 +1,559 @@
+---
+title: "Where Stress Holds Northampton Cyclists Back"
+format:
+  html:
+    self-contained: true
+    page-layout: custom
+    toc: false
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{r setup}
+library(sf)
+library(tidyverse)
+library(mapgl)
+library(here)
+
+flows <- st_read(here("data/stress_flows.gpkg"), layer = "stress_flows", quiet = TRUE) |>
+  mutate(score = pmax(-coalesce(flow_delta, 0), coalesce(flow_lts, 0)))
+
+hex_centers  <- st_read(here("data/stress_flows.gpkg"), layer = "hex_centers", quiet = TRUE)
+destinations <- st_read(here("data/destinations.gpkg"), quiet = TRUE)
+schools <- st_read(here("data/schools.gpkg"), quiet = TRUE) |>
+  filter(name %in% c(
+    "Jackson Street School",
+    "Robert K. Finn Ryan Road Elementary School",
+    "John F. Kennedy Middle School",
+    "Leeds Elementary School",
+    "Bridge St School",
+    "Smith Vocational and Agricultural High School",
+    "Northampton High School"
+  ))
+```
+
+```{=html}
+<style>
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body { margin: 0; padding: 0; font-family: Georgia, serif; background: #fafafa; }
+
+  #page-title {
+    padding: 4rem 3rem 3rem;
+    max-width: 640px;
+    margin: 0 auto;
+  }
+  #page-title h1 {
+    font-size: 2.2rem;
+    line-height: 1.25;
+    color: #1a1a2e;
+    margin-bottom: 1rem;
+  }
+  #page-title p {
+    font-size: 1.1rem;
+    line-height: 1.75;
+    color: #555;
+  }
+
+  #story-wrapper {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  #map-panel {
+    position: sticky;
+    top: 0;
+    width: 58%;
+    height: 100vh;
+    flex-shrink: 0;
+    order: 2;
+  }
+
+  #text-panel {
+    width: 42%;
+    padding: 0 2.5rem 60vh;
+    order: 1;
+  }
+
+  .story-section {
+    min-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 3rem 0;
+    border-bottom: 1px solid #e8e8e8;
+  }
+  .story-section:last-child { border-bottom: none; }
+
+  .story-section h2 {
+    font-size: 1.35rem;
+    margin: 0 0 0.85rem;
+    color: #1a1a2e;
+    font-family: system-ui, sans-serif;
+    font-weight: 600;
+  }
+  .story-section p {
+    font-size: 1rem;
+    line-height: 1.8;
+    color: #444;
+    margin: 0 0 0.8rem;
+  }
+  .story-section p:last-child { margin-bottom: 0; }
+
+  #methodology {
+    max-width: 720px;
+    margin: 4rem auto;
+    padding: 2.5rem 3rem;
+    background: #fff;
+    border-top: 3px solid #1a1a2e;
+  }
+  #methodology h2 {
+    font-size: 1.4rem;
+    margin-bottom: 1.2rem;
+    font-family: system-ui, sans-serif;
+    color: #1a1a2e;
+  }
+  #methodology p, #methodology ol {
+    font-size: 0.97rem;
+    line-height: 1.8;
+    color: #444;
+  }
+  #methodology ol { padding-left: 1.4rem; }
+  #methodology li { margin-bottom: 0.5rem; }
+</style>
+
+<div id="page-title">
+  <h1>Where Stress Holds Northampton Cyclists Back</h1>
+  <p>Not all streets feel safe to bike on. This story maps the gap between where
+  cyclists could go and where stress lets them comfortably travel — and shows
+  which streets, if made safer, would make the biggest difference.</p>
+  <p style="font-size:0.9rem; color:#888;">Scroll to explore &darr;</p>
+</div>
+
+<div id="story-wrapper">
+  <div id="map-panel">
+```
+
+```{r map}
+maplibre(
+  style    = carto_style("positron"),
+  elementId = "main-map",
+  height   = "100vh"
+) |>
+  fit_bounds(unname(st_bbox(hex_centers)), padding = 40) |>
+  add_navigation_control(show_compass = FALSE, position = "top-right") |>
+  # Population hex centers (initially visible)
+  add_source("src-hex", hex_centers) |>
+  add_circle_layer(
+    "hex-centers", source = "src-hex",
+    circle_color = interpolate(
+      column = "people_count",
+      values = c(0, 500, 3000),
+      stops  = c("#fee5d9", "#fc4e2a", "#800026")),
+    circle_radius = interpolate(
+      column = "people_count",
+      values = c(0, 3000),
+      stops  = c(4, 14)),
+    circle_opacity   = 0.7,
+    circle_stroke_color = "#ffffff",
+    circle_stroke_width = 1,
+    visibility = "visible",
+    tooltip = "people_count"
+  ) |>
+  # Schools (initially hidden, opacity starts at 0)
+  add_source("src-schools", schools) |>
+  add_circle_layer(
+    "schools-layer", source = "src-schools",
+    circle_color        = "#c0392b",
+    circle_radius       = 9,
+    circle_opacity      = 0,
+    circle_stroke_color = "#ffffff",
+    circle_stroke_width = 2,
+    visibility = "none",
+    tooltip = "name"
+  ) |>
+  # Destinations (initially hidden)
+  add_source("src-dest", destinations) |>
+  add_circle_layer(
+    "destinations-layer", source = "src-dest",
+    circle_color        = "#27ae60",
+    circle_radius       = 9,
+    circle_opacity      = 0,
+    circle_stroke_color = "#ffffff",
+    circle_stroke_width = 2,
+    visibility = "none",
+    tooltip = "name"
+  ) |>
+  # Small school/destination markers for stress maps (same sources, smaller radius)
+  add_circle_layer(
+    "schools-small", source = "src-schools",
+    circle_color        = "#c0392b",
+    circle_radius       = 5,
+    circle_opacity      = 0,
+    circle_stroke_color = "#ffffff",
+    circle_stroke_width = 1,
+    visibility = "none",
+    tooltip = "name"
+  ) |>
+  add_circle_layer(
+    "destinations-small", source = "src-dest",
+    circle_color        = "#27ae60",
+    circle_radius       = 5,
+    circle_opacity      = 0,
+    circle_stroke_color = "#ffffff",
+    circle_stroke_width = 1,
+    visibility = "none",
+    tooltip = "name"
+  ) |>
+  # Unweighted flow (initially hidden)
+  add_source("src-unweighted", flows |> filter(flow_unweighted > 0)) |>
+  add_line_layer(
+    "unweighted-flow", source = "src-unweighted",
+    line_color = interpolate(
+      column = "flow_unweighted",
+      values = c(100, 5000, 80000),
+      stops  = c("#fee5d9", "#fc4e2a", "#800026")),
+    line_width = interpolate(
+      column = "flow_unweighted",
+      values = c(100, 80000),
+      stops  = c(1, 6)),
+    line_opacity = 0,
+    visibility   = "none"
+  ) |>
+  # LTS-weighted flow (initially hidden)
+  add_source("src-weighted", flows |> filter(flow_lts > 0)) |>
+  add_line_layer(
+    "weighted-flow", source = "src-weighted",
+    line_color = interpolate(
+      column = "flow_lts",
+      values = c(100, 5000, 80000),
+      stops  = c("#d1e5f0", "#4393c3", "#053061")),
+    line_width = interpolate(
+      column = "flow_lts",
+      values = c(100, 80000),
+      stops  = c(1, 6)),
+    line_opacity = 0,
+    visibility   = "none"
+  ) |>
+  # Unavoidable high-stress segments (initially hidden)
+  add_source("src-unavoidable", 
+             flows |> filter(flow_lts >= 1600, LTS >= 3)) |>
+  add_line_layer(
+    "unavoidable-stress", source = "src-unavoidable",
+    line_color = "#c0392b",
+    line_width = interpolate(
+      column = "flow_lts",
+      values = c(100, 80000),
+      stops  = c(1.5, 7)),
+    line_opacity = 0,
+    visibility   = "none"
+  ) |>
+  # Avoided-or-unavoidable (initially hidden)
+  add_source("src-avoided",
+    flows |> filter(flow_delta < 0 | (flow_lts > 0 & LTS >= 3), score>=15000)) |>
+  add_line_layer(
+    "avoided-unavoidable", source = "src-avoided",
+    line_color = interpolate(
+      column = "score",
+      values = c(15000, 30000, 80000),
+      stops  = c("#fee090", "#f46d43", "#a50026")),
+    line_width   = 2.5,
+    line_opacity = 0,
+    visibility   = "none"
+  ) |>
+  # Detour burden (initially hidden)
+  add_source("src-detour",
+    flows |> filter(!is.na(detour_burden), detour_burden >= 1e6)) |>
+  add_line_layer(
+    "detour-burden", source = "src-detour",
+    line_color = interpolate(
+      column = "detour_burden",
+      values = c(1e6, 2e6, 5e6),
+      stops  = c("#fd8d3c", "#e31a1c", "#67000d")),
+    line_width = interpolate(
+      column = "detour_burden",
+      values = c(1e6, 5e7),
+      stops  = c(2, 7)),
+    line_opacity = 0,
+    visibility   = "none"
+  )
+```
+
+```{=html}
+  </div><!-- /map-panel -->
+
+  <div id="text-panel">
+
+    <section class="story-section" data-section="intro">
+      <h2>Where People Live</h2>
+      <p>For this study, Northampton 
+      was divided into a grid of hexagonal cells, each about
+      500 feet (150 meters) on a side — roughly the size of a city block. Within
+      each cell, we found the population-weighted center: the point closest to
+      where most residents actually live.</p>
+      <p>Each circle on this map represents one of those cells, sized and colored
+      by the number of residents. Large red circles are densely populated; small
+      pale dots have fewer residents. These are the starting points for every
+      trip in the analysis.</p>
+    </section>
+
+    <section class="story-section" data-section="schools">
+      <h2>Getting Kids to School</h2>
+      <p>Seven public schools (shown in red) serve Northampton's children.
+      The daily school commute is one of the most revealing tests of a city's
+      cycling infrastructure: it's a trip families make repeatedly, in all
+      weather, with children in tow.</p>
+      <p>Whether neighborhoods can reach their schools by bike — comfortably,
+      not just theoretically — shapes whether families ever try.</p>
+    </section>
+
+    <section class="story-section" data-section="destinations">
+      <h2>Everyday Destinations</h2>
+      <p>Beyond schools, people travel to libraries, the YMCA, grocery stores,
+      parks, downtown shops, and medical facilities (shown in green). These are
+      the places a connected cycling network should reliably reach.</p>
+      <p>Together, schools and other destinations give us roughly 23,000 origin-
+      destination pairs — one for every population cell and destination
+      combination.</p>
+    </section>
+
+    <section class="story-section" data-section="unweighted">
+      <h2>The Shortest Routes</h2>
+      <p>If cyclists could ignore traffic stress entirely and always take the
+      shortest route, this is where bicycle traffic would concentrate. Bright red
+      lines carry the most riders; pale lines carry fewer.</p>
+      <p>Routes spread across the full network — including high-speed and
+      high-traffic roads that many cyclists do not feel safe using.</p>
+    </section>
+
+    <section class="story-section" data-section="weighted">
+      <h2>When Comfort Matters</h2>
+      <p>Now we penalize high-stress streets, routing cyclists onto calmer
+      alternatives even when they're longer. The network shifts: some streets gain
+      traffic as low-stress alternatives, while high-stress roads lose riders.</p>
+      <p>Blue lines show where cyclists actually want to go when the route
+      respects their comfort. The thickest corridors are Northampton's true
+      cycling backbone.</p>
+    </section>
+
+    <section class="story-section" data-section="unavoidable">
+      <h2>Stress You Can't Escape</h2>
+      <p>Even when routing avoids stress, some high-stress streets remain. These
+      red segments still carry significant bicycle traffic in the comfort-aware
+      scenario — they're simply unavoidable.</p>
+      <p>Often these are bridge crossings, key intersections, or connector streets
+      with no parallel alternative. Improving just a handful of these segments
+      could unlock much safer routes for thousands of trips.</p>
+    </section>
+
+    <section class="story-section" data-section="avoided">
+      <h2>Streets That Matter Most</h2>
+      <p>Combining both signals: streets that cyclists actively detour around
+      (they were used on shortest routes but dropped when comfort mattered) and
+      streets that remain unavoidable despite their stress. The score reflects the
+      magnitude of avoidance or unavoidable use.</p>
+      <p>These are Northampton's most critical cycling infrastructure needs —
+      the places where investment would have the largest effect on ridership.</p>
+    </section>
+
+    <section class="story-section" data-section="detour">
+      <h2>The Cost of Stress</h2>
+      <p>The final map shows <em>detour burden</em>: for each street segment, the
+      total extra distance that all cyclists collectively ride because of it.
+      Red segments, if made safer, would eliminate the most cumulative detour.</p>
+      <p>This is where infrastructure investment pays off most broadly — not just
+      for one neighborhood, but across the city.</p>
+    </section>
+
+  </div><!-- /text-panel -->
+</div><!-- /story-wrapper -->
+
+<div id="methodology">
+  <h2>How This Map Was Made</h2>
+  <p>Every street in Northampton has been rated for <strong>Level of Traffic
+  Stress (LTS)</strong> — a measure of how safe and comfortable it feels to
+  bike. LTS 1 streets are comfortable for almost anyone, including children and
+  seniors. LTS 4 streets are high-speed or high-traffic roads suitable only for
+  the most experienced riders.</p>
+  <p>Using residential address data, we overlaid a grid of hexagonal cells —
+  each about 500 feet (150 meters) on a side — on Northampton and found the
+  population-weighted center of each occupied cell. We then identified seven
+  public schools and dozens of everyday destinations across the city.</p>
+  <p>For each of the roughly 23,000 origin-destination pairs, we
+  calculated two routes:</p>
+  <ol>
+    <li><strong>The shortest route by distance</strong> — as if cyclists could
+    ignore stress entirely.</li>
+    <li><strong>The least-stressful route</strong> — which strongly penalizes
+    high-stress segments, pushing cyclists onto calmer alternatives even when
+    they're longer.</li>
+  </ol>
+  <p>By comparing these routes, we can see which streets carry the most bicycle
+  traffic, which streets people go out of their way to avoid, and which streets —
+  if made safer — would collectively save cyclists the most extra distance.</p>
+  <p style="font-size:0.85rem; color:#888; margin-top:1.5rem;">
+  Analysis and mapping: Kent S Johnson.<br>
+  Level of Traffic Stress criteria: <a href="https://peterfurth.sites.northeastern.edu/2014/05/21/criteria-for-level-of-traffic-stress/" target="_blank">Peter Furth, Northeastern University</a>.<br>
+  Data: OpenStreetMap street network · municipal address data · school district boundaries.<br>
+  Analysis: R / flownet package.
+  </p>
+</div>
+
+<script>
+(function () {
+  // Target opacities for each layer when fully visible
+  var layerOpacities = {
+    'hex-centers':          0.7,
+    'schools-layer':        0.9,
+    'destinations-layer':   0.9,
+    'schools-small':        0.8,
+    'destinations-small':   0.8,
+    'unweighted-flow':      0.8,
+    'weighted-flow':        0.8,
+    'unavoidable-stress':   0.9,
+    'avoided-unavoidable':  0.85,
+    'detour-burden':        0.9
+  };
+
+  // Paint property name for opacity, keyed by layer type
+  function opacityProp(map, layerId) {
+    var layer = map.getLayer(layerId);
+    return layer ? layer.type + '-opacity' : null;
+  }
+
+  // Smooth opacity animation using requestAnimationFrame
+  function animateOpacity(map, layerId, from, to, duration, onComplete) {
+    var prop = opacityProp(map, layerId);
+    if (!prop) return;
+    var start = null;
+    function step(ts) {
+      if (!start) start = ts;
+      var t = Math.min((ts - start) / duration, 1);
+      var eased = t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t; // ease-in-out
+      map.setPaintProperty(layerId, prop, from + (to - from) * eased);
+      if (t < 1) {
+        requestAnimationFrame(step);
+      } else if (onComplete) {
+        onComplete();
+      }
+    }
+    requestAnimationFrame(step);
+  }
+
+  function showLayer(map, layerId) {
+    map.setLayoutProperty(layerId, 'visibility', 'visible');
+    animateOpacity(map, layerId, 0, layerOpacities[layerId], 450, null);
+  }
+
+  function hideLayer(map, layerId) {
+    var prop = opacityProp(map, layerId);
+    if (!prop) return;
+    var current = map.getPaintProperty(layerId, prop) || 0;
+    animateOpacity(map, layerId, current, 0, 450, function () {
+      map.setLayoutProperty(layerId, 'visibility', 'none');
+    });
+  }
+
+  // Which layers are shown/hidden for each scroll section
+  var ALL_LAYERS = ['hex-centers', 'schools-layer', 'destinations-layer',
+                    'schools-small', 'destinations-small', 'unweighted-flow',
+                    'weighted-flow', 'unavoidable-stress', 'avoided-unavoidable',
+                    'detour-burden'];
+
+  function sectionConfig(show) {
+    return { show: show, hide: ALL_LAYERS.filter(function(l) { return show.indexOf(l) === -1; }) };
+  }
+
+  var sections = {
+    'intro':       sectionConfig(['hex-centers']),
+    'schools':     sectionConfig(['hex-centers', 'schools-layer']),
+    'destinations':sectionConfig(['hex-centers', 'schools-layer', 'destinations-layer']),
+    'unweighted':  sectionConfig(['unweighted-flow', 'schools-small', 'destinations-small']),
+    'weighted':    sectionConfig(['weighted-flow',   'schools-small', 'destinations-small']),
+    'unavoidable': sectionConfig(['unavoidable-stress', 'schools-small', 'destinations-small']),
+    'avoided':     sectionConfig(['avoided-unavoidable', 'schools-small', 'destinations-small']),
+    'detour':      sectionConfig(['detour-burden', 'schools-small', 'destinations-small'])
+  };
+
+  function activateSection(map, sectionId) {
+    var cfg = sections[sectionId];
+    if (!cfg) return;
+    cfg.show.forEach(function (l) { showLayer(map, l); });
+    cfg.hide.forEach(function (l) { hideLayer(map, l); });
+  }
+
+  function setupObserver(map) {
+    var activeSections = new Set();
+    var currentSection = null;
+
+    var observer = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          activeSections.add(entry.target);
+        } else {
+          activeSections.delete(entry.target);
+        }
+      });
+
+      if (activeSections.size === 0) return;
+
+      // Pick the section whose center is closest to the viewport midpoint.
+      var viewMid = window.innerHeight / 2;
+      var best = null, bestDist = Infinity;
+      activeSections.forEach(function (el) {
+        var rect = el.getBoundingClientRect();
+        var dist = Math.abs(rect.top + rect.height / 2 - viewMid);
+        if (dist < bestDist) { bestDist = dist; best = el; }
+      });
+
+      if (best && best.dataset.section !== currentSection) {
+        currentSection = best.dataset.section;
+        activateSection(map, currentSection);
+      }
+    }, { rootMargin: '-30% 0px -30% 0px', threshold: 0 });
+
+    document.querySelectorAll('.story-section[data-section]').forEach(function (el) {
+      observer.observe(el);
+    });
+  }
+
+  // Poll for the mapgl widget instance (HTMLWidgets initialises asynchronously)
+  function waitForMap(callback) {
+    var attempts = 0;
+    var interval = setInterval(function () {
+      attempts++;
+      var widgets = window.HTMLWidgets
+        ? document.querySelectorAll('.html-widget.maplibregl')
+        : [];
+      var instance;
+      for (var i = 0; i < widgets.length; i++) {
+        var candidate = HTMLWidgets.getInstance(widgets[i]);
+        if (candidate && candidate.getMap && candidate.getMap()) {
+          instance = candidate;
+          break;
+        }
+      }
+      if (instance) {
+        clearInterval(interval);
+        callback(instance.getMap());
+      } else if (attempts > 40) {
+        clearInterval(interval);
+        console.warn('BikeStressScrolly: could not find mapgl map instance');
+      }
+    }, 250);
+  }
+
+  waitForMap(function (map) {
+    map.scrollZoom.disable();
+    map.on('idle', function onFirstIdle() {
+      map.off('idle', onFirstIdle);
+      activateSection(map, 'intro');
+      setupObserver(map);
+    });
+  });
+})();
+</script>
+```

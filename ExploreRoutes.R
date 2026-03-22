@@ -275,7 +275,7 @@ mapview(
 )
 
 # How much flow is sill on high stress streets, even with high avoidance?
-high_stress_flows = stress_with_flows |> filter(flow_lts > 0, LTS >=3)
+high_stress_flows = stress_with_flows |> filter(flow_lts > 1600, LTS >=3)
 mapview(
   high_stress_flows,
   zcol       = "flow_lts",
@@ -377,3 +377,21 @@ stress_detour <- stress_graph |>
   st_as_sf()
 
 mapview(stress_detour |> filter(detour_burden>=1000000), zcol = "detour_burden", lwd = 3, layer.name = "Detour burden")
+
+# Add detour_burden to stress_with_flows and save for scrollytelling map
+stress_with_flows <- stress_with_flows |>
+  left_join(
+    stress_detour |> st_drop_geometry() |> select(id, detour_burden),
+    by = "id"
+  )
+
+stress_with_flows |>
+  filter(
+    flow_unweighted > 0 | flow_lts > 0 | !is.na(detour_burden)
+  ) |>
+  select(LTS, flow_unweighted, flow_lts, flow_delta, detour_burden) |>
+  st_write(here::here("data/stress_flows.gpkg"), delete_dsn = TRUE)
+
+hex_centers |>
+  select(people_count) |>
+  st_write(here::here("data/stress_flows.gpkg"), layer = "hex_centers", append = TRUE)
