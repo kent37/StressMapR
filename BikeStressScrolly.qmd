@@ -253,7 +253,7 @@ maplibre(
   ) |>
   # Avoided-or-unavoidable (initially hidden)
   add_source("src-avoided",
-    flows |> filter(flow_delta < 0 | (flow_lts > 0 & LTS >= 3), score>=15000)) |>
+    flows |> filter((flow_delta < 0 | flow_lts > 0) & LTS >= 3, score>=15000)) |>
   add_line_layer(
     "avoided-unavoidable", source = "src-avoided",
     line_color = interpolate(

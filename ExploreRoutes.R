@@ -307,7 +307,8 @@ mapview(
 )
 
 # High avoidance: segments avoided due to stress (negative delta only)
-neg_data   <- stress_with_flows |> filter(!is.na(flow_delta), flow_delta < 0)
+neg_data   <- stress_with_flows |> 
+  filter(!is.na(flow_delta), flow_delta < 0, LTS >=3)
 neg_breaks <- pretty(neg_data$flow_delta, n = 8)
 neg_colors <- colorRampPalette(c("#d73027", "#ffffbf"))(length(neg_breaks))
 mapview(
@@ -320,8 +321,10 @@ mapview(
 )
 
 # Segments that are either highly avoided or unavoidable
+# Omit LTS 1 & 2 streets that are avoided; they are avoided because
+# they link to high stress routes.
 candidates = stress_with_flows |> 
-  filter(flow_delta < 0 | (flow_lts > 0 & LTS >=3)) |> 
+  filter((flow_delta < 0 | flow_lts > 0) & LTS >=3) |> 
   mutate(score = pmax(-flow_delta, flow_lts))
 mapview(candidates |> filter(score>15000), zcol='score',
         layer.name='Avoided or unavoidable') +
