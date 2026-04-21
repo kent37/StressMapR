@@ -1,0 +1,353 @@
+---
+title: ""
+format:
+  typst:
+    template-partials:
+      - page.typ
+execute:
+  echo: false
+  warning: false
+  message: false
+---
+
+```{=typst}
+#set text(font: "Helvetica Neue", size: 20pt, lang: "en")
+#set par(leading: 0.65em, justify: false)
+```
+
+```{r setup}
+#| include: false
+library(sf)
+library(tmap)
+library(tidyverse)
+library(here)
+
+flows <- st_read(here("data/stress_flows.gpkg"), layer = "stress_flows", quiet = TRUE) |>
+  mutate(score = pmax(-coalesce(flow_delta, 0), coalesce(flow_lts, 0)))
+hex_centers  <- st_read(here("data/stress_flows.gpkg"), layer = "hex_centers", quiet = TRUE)
+destinations <- st_read(here("data/destinations.gpkg"), quiet = TRUE)
+schools <- st_read(here("data/schools.gpkg"), quiet = TRUE) |>
+  filter(name %in% c(
+    "Jackson Street School",
+    "Robert K. Finn Ryan Road Elementary School",
+    "John F. Kennedy Middle School",
+    "Leeds Elementary School",
+    "Bridge St School",
+    "Smith Vocational and Agricultural High School",
+    "Northampton High School"
+  ))
+noho_outline <- read_sf(here("../Noho/Shapefiles/Noho_outline/Noho_outline.gpkg"))
+
+tmap_mode("plot")
+bbox <- st_bbox(hex_centers)
+dir.create(here("poster_charts"), showWarnings = FALSE)
+
+base_map <- function() {
+  tm_basemap("CartoDB.Positron") +
+  tm_shape(noho_outline, bbox = bbox) +
+  tm_borders(col = "#aaaaaa", lwd = 1.2)
+}
+
+no_legend <- tm_layout(frame = FALSE, legend.show = FALSE)
+
+# ── Row 1, Map A: Where People Live ───────────────────────────────────
+map_pop <-
+  base_map() +
+  tm_shape(hex_centers) +
+  tm_bubbles(
+    col_alpha  = 0,
+    fill       = "people_count",
+    fill.scale = tm_scale_continuous(
+      values = c("#fc4e2a", "#800026"),
+      limits = NA
+    ),
+    fill_alpha  = 0.75,
+    fill.legend = tm_legend(show = FALSE),
+    size        = "people_count",
+    size.scale  = tm_scale_continuous(values = c(5, 10),
+                                      values.scale = 1,
+                                      limits=NA),
+    size.legend = tm_legend(show = FALSE),
+    col         = NA
+  ) +
+  no_legend
+
+tmap_save(map_pop, here("poster_charts/poster_pop.png"),
+          width = 7.5, height = 7.0, units = "in", dpi = 150)
+
+# ── Row 1, Map B: Getting Kids to School ──────────────────────────────
+map_schools <-
+  base_map() +
+  tm_shape(schools) +
+  tm_dots(fill = "#c0392b", size = 0.75) +
+  no_legend
+
+tmap_save(map_schools, here("poster_charts/poster_schools.png"),
+          width = 7.5, height = 7.0, units = "in", dpi = 150)
+
+# ── Row 1, Map C: Everyday Destinations ───────────────────────────────
+map_dest <-
+  base_map() +
+  tm_shape(destinations) +
+  tm_dots(fill = "#27ae60", size = 0.75) +
+  no_legend
+
+tmap_save(map_dest, here("poster_charts/poster_dest.png"),
+          width = 7.5, height = 7.0, units = "in", dpi = 150)
+
+# ── Row 2, Map A: Shortest Routes ────────────────────────────────────
+map_unw <-
+  base_map() +
+  tm_shape(flows |> filter(flow_unweighted > 0)) +
+  tm_lines(
+    col       = "flow_unweighted",
+    col.scale = tm_scale_continuous_sqrt(
+      values = c("#fee090", "#f46d43", "#a50026"),
+      limits = NA
+    ),
+    col.legend = tm_legend(show = FALSE),
+    lwd        = "flow_unweighted",
+    lwd.scale  = tm_scale_continuous(values = c(0, 10),
+                                     values.scale = 4,
+                                     limits = NA,
+                                     trans = 'log'),
+    lwd.legend = tm_legend(show = FALSE)
+  ) +
+  # tm_shape(schools) + tm_dots(fill = "#c0392b", size = 0.3) +
+  # tm_shape(destinations) + tm_dots(fill = "#27ae60", size = 0.3) +
+  no_legend
+
+tmap_save(map_unw, here("poster_charts/poster_unw.png"),
+          width = 11.5, height = 8.0, units = "in", dpi = 150)
+
+# ── Row 2, Map B: When Comfort Matters ───────────────────────────────
+map_wtd <-
+  base_map() +
+  tm_shape(flows |> filter(flow_lts > 0)) +
+  tm_lines(
+    col       = "flow_lts",
+    col.scale = tm_scale_continuous(
+      values = c("#d1e5f0", "#4393c3", "#053061"),
+      limits = NA
+    ),
+    col.legend = tm_legend(show = FALSE),
+    lwd        = "flow_lts",
+    lwd.scale  = tm_scale_continuous(values = c(0, 10),
+                                     values.scale=4,
+                                     limits = NA,
+                                     trans = 'log'),
+    lwd.legend = tm_legend(show = FALSE)
+  ) +
+  # tm_shape(schools) + tm_dots(fill = "#c0392b", size = 0.18) +
+  # tm_shape(destinations) + tm_dots(fill = "#27ae60", size = 0.18) +
+  no_legend
+
+tmap_save(map_wtd, here("poster_charts/poster_wtd.png"),
+          width = 11.5, height = 8.0, units = "in", dpi = 150)
+
+# ── Row 3, Map A: Stress You Can't Escape ─────────────────────────────
+map_unav <-
+  base_map() +
+  tm_shape(flows |> filter(flow_lts >= 1600, LTS >= 3)) +
+  tm_lines(
+    col       = "flow_lts",
+    col.scale = tm_scale_continuous(
+      values = c("#f46d43", "#a50026"),
+      limits = NA
+    ),
+    # lwd = 4,
+    lwd       = "flow_lts",
+    lwd.scale = tm_scale_continuous(values = c(0, 10),
+                                    values.scale=4,
+                                    limits = NA,
+                                    trans = 'log'),
+    lwd.legend = tm_legend(show = FALSE)
+  ) +
+  # tm_shape(schools) + tm_dots(fill = "#c0392b", size = 0.18) +
+  # tm_shape(destinations) + tm_dots(fill = "#27ae60", size = 0.18) +
+  no_legend
+
+tmap_save(map_unav, here("poster_charts/poster_unav.png"),
+          width = 11.5, height = 8.0, units = "in", dpi = 150)
+
+# ── Row 3, Map B: Streets That Matter Most ────────────────────────────
+map_avoid <-
+  base_map() +
+  tm_shape(flows |> filter((flow_delta < 0 | flow_lts > 0), LTS >= 3, score >= 15000)) +
+  tm_lines(
+    col       = "score",
+    col.scale = tm_scale_continuous(
+      values = c("#f46d43", "#a50026"),
+      limits = NA
+    ),
+    col.legend = tm_legend(show = FALSE),
+    lwd       = "score",
+    lwd.scale = tm_scale_continuous(values = c(0, 10),
+                                    values.scale=4,
+                                    limits = NA,
+                                    trans = 'log'),
+    lwd.legend = tm_legend(show = FALSE)
+  ) +
+  # tm_shape(schools) + tm_dots(fill = "#c0392b", size = 0.18) +
+  # tm_shape(destinations) + tm_dots(fill = "#27ae60", size = 0.18) +
+  no_legend
+
+tmap_save(map_avoid, here("poster_charts/poster_avoid.png"),
+          width = 11.5, height = 8.0, units = "in", dpi = 150)
+```
+
+```{=typst}
+// ── TITLE ─────────────────────────────────────────────────────────────
+#block(
+  fill: rgb("1a1a2e"),
+  width: 100%,
+  inset: (x: 1em, y: 0.8em),
+  radius: 5pt,
+)[
+  #grid(
+    columns: (1fr, auto),
+    gutter: 2em,
+    align: (left + horizon, right + horizon),
+    stack(
+      spacing: 0.4em,
+      text(fill: white, size: 52pt, weight: "black")[
+        Where Stress Holds Northampton Cyclists Back
+      ],
+      text(fill: rgb("EEEEEE"), size: 24pt, style: "italic")[
+        Not all streets feel safe to bike. We mapped the gap to show which streets, if made safer, would help the most.
+      ],
+    ),
+    text(fill: rgb("AAAAAA"), size: 17pt)[
+      Kent S Johnson\
+      Northampton, MA\
+      April 2026
+    ],
+  )
+]
+
+#v(0.28in)
+
+// ── ROW 1: population → schools → destinations ────────────────────────
+#grid(
+  columns: (1fr, 1fr, 1fr),
+  gutter: 0.35in,
+  stack(
+    spacing: 0.12em,
+    text(size: 28pt, weight: "bold", fill: rgb("1a1a2e"))[Where People Live],
+    v(0.3em),
+    image("poster_charts/poster_pop.png", width: 100%),
+    v(0.08em),
+    text(size: 19pt, fill: rgb("555555"))[
+      Circles show where Northampton residents live, sized by population. These are the starting points for every trip in the analysis.
+    ],
+  ),
+  stack(
+    spacing: 0.12em,
+    text(size: 28pt, weight: "bold", fill: rgb("1a1a2e"))[Getting Kids to School],
+    v(0.3em),
+    image("poster_charts/poster_schools.png", width: 100%),
+    v(0.08em),
+    text(size: 19pt, fill: rgb("555555"))[
+      Seven public schools serve Northampton's children. Whether families can reach their schools by bike — comfortably, not just theoretically — shapes whether they ever try.
+    ],
+  ),
+  stack(
+    spacing: 0.12em,
+    text(size: 28pt, weight: "bold", fill: rgb("1a1a2e"))[Everyday Destinations],
+    v(0.3em),
+    image("poster_charts/poster_dest.png", width: 100%),
+    v(0.08em),
+    text(size: 19pt, fill: rgb("555555"))[
+      Beyond schools, people travel to libraries, the YMCA, grocery stores, parks, downtown shops, and medical facilities. These are places a connected cycling network should reliably reach.
+    ],
+  ),
+)
+
+#v(0.28in)
+
+// ── ROW 2: route flows ────────────────────────────────────────────────
+#grid(
+  columns: (1fr, 1fr),
+  gutter: 0.4in,
+  stack(
+    spacing: 0.12em,
+    text(size: 28pt, weight: "bold", fill: rgb("1a1a2e"))[The Shortest Routes],
+    image("poster_charts/poster_unw.png", width: 100%),
+    v(0.08em),
+    text(size: 19pt, fill: rgb("555555"))[
+      If cyclists could ignore traffic stress and always take the shortest route, this is where bicycle traffic would concentrate. Bright red lines carry the most riders, including high-speed and high-traffic roads that many cyclists do not feel safe using.
+    ],
+  ),
+  stack(
+    spacing: 0.12em,
+    text(size: 28pt, weight: "bold", fill: rgb("1a1a2e"))[When Comfort Matters],
+    image("poster_charts/poster_wtd.png", width: 100%),
+    v(0.08em),
+    text(size: 19pt, fill: rgb("555555"))[
+      Cyclists avoid high-stress streets, routing onto calmer alternatives even when longer. The network shifts. Blue lines show where cyclists feel safe. This is Northampton's current cycling backbone.
+    ],
+  ),
+)
+
+#v(0.28in)
+
+// ── ROW 3: stress analysis ────────────────────────────────────────────
+#grid(
+  columns: (1fr, 1fr),
+  gutter: 0.4in,
+  stack(
+    spacing: 0.12em,
+    text(size: 28pt, weight: "bold", fill: rgb("1a1a2e"))[Stress You Can't Escape],
+    image("poster_charts/poster_unav.png", width: 100%),
+    v(0.08em),
+    text(size: 19pt, fill: rgb("555555"))[
+      Some high-stress segments have no good alternative. These segments have  significant bicycle traffic. Improving just a handful could unlock safer routes for thousands of trips.
+    ],
+  ),
+  stack(
+    spacing: 0.12em,
+    text(size: 28pt, weight: "bold", fill: rgb("1a1a2e"))[Streets That Matter Most],
+    image("poster_charts/poster_avoid.png", width: 100%),
+    v(0.08em),
+    text(size: 19pt, fill: rgb("555555"))[
+      Streets cyclists actively detour around and streets that remain unavoidable despite their stress. These are Northampton's most critical cycling infrastructure needs.
+    ],
+  ),
+)
+
+#v(0.22in)
+#line(length: 100%, stroke: 1.5pt + rgb("cccccc"))
+#v(0.18in)
+
+// ── METHODOLOGY ───────────────────────────────────────────────────────
+#grid(
+  columns: (1fr, 1fr),
+  gutter: 0.6in,
+  align: top,
+  [
+    #text(size: 22pt, weight: "bold", fill: rgb("1a1a2e"))[How This Was Made]
+    #v(0.35em)
+    #text(size: 16pt, fill: rgb("444444"))[
+      Every street in Northampton has been rated for *Level of Traffic Stress (LTS)* — a measure of how safe and comfortable it feels to bike. LTS 1 is comfortable for almost anyone; LTS 4 is suitable only for experienced riders.
+
+      Using residential address data, we overlaid a hexagonal grid on Northampton and found the population-weighted center of each cell. For each of roughly 23,000 origin-destination pairs, we calculated two routes: the shortest route by distance, and the least-stressful route. Comparing these routes reveals which streets people avoid, which remain unavoidable, and where infrastructure investment would have the broadest impact.
+    ]
+  ],
+  [
+    #text(size: 22pt, weight: "bold", fill: rgb("1a1a2e"))[About This Analysis]
+    #v(0.35em)
+    #text(size: 16pt, fill: rgb("444444"))[
+      This analysis supports conversations about where cycling infrastructure investment in Northampton would have the greatest effect — not just for one neighborhood, but across the full city.
+
+      High-stress streets identified here are candidates for traffic calming, protected lanes, or signal improvements. Even modest changes on a few key segments could make cycling comfortable and practical for thousands more residents.
+    ]
+    #v(0.6em)
+    #text(size: 13pt, fill: rgb("999999"))[
+      Analysis and mapping: Kent S Johnson ·
+      LTS criteria: Peter Furth, Northeastern University ·
+      Data: OpenStreetMap and municipal address data ·
+      Copyright 2026 Kent S Johnson #h(0.4em) #box(image("poster_charts/cc-by-nc-sa.png", height: 11pt)) #h(0.3em) #link("https://creativecommons.org/licenses/by-nc-sa/4.0/")[CC BY-NC-SA 4.0]
+    ]
+  ],
+)
+```

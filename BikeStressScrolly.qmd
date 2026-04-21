@@ -151,12 +151,12 @@ maplibre(
     "hex-centers", source = "src-hex",
     circle_color = interpolate(
       column = "people_count",
-      values = c(0, 500, 3000),
+      values = c(0, 200, 400),
       stops  = c("#fee5d9", "#fc4e2a", "#800026")),
     circle_radius = interpolate(
       column = "people_count",
-      values = c(0, 3000),
-      stops  = c(4, 14)),
+      values = c(0, 400),
+      stops  = c(4, 8)),
     circle_opacity   = 0.7,
     circle_stroke_color = "#ffffff",
     circle_stroke_width = 1,

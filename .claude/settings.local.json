@@ -8,7 +8,14 @@
       "mcp__r-btw__list_r_sessions",
       "mcp__r-btw__select_r_session",
       "mcp__r-btw__btw_tool_docs_help_page",
-      "WebFetch(domain:nominatim.openstreetmap.org)"
+      "WebFetch(domain:nominatim.openstreetmap.org)",
+      "Bash(quarto render *)",
+      "WebFetch(domain:www.google.com)",
+      "Bash(QUARTO_TYPST_KEEP_TYP=1 quarto render BikePoster.qmd)",
+      "WebFetch(domain:d.basemaps.cartocdn.com)",
+      "WebFetch(domain:c.basemaps.cartocdn.com)",
+      "WebFetch(domain:b.basemaps.cartocdn.com)",
+      "WebFetch(domain:a.basemaps.cartocdn.com)"
     ]
   }
 }
