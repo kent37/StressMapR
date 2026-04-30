@@ -104,19 +104,24 @@ mapview(pop_by_hex |> filter(density >= 4000), zcol='density') +
 #   st_as_sf(coords=c('lon', 'lat'), crs=4326)
 # Allow editing of the schools to put the location near the entrances
 #st_write(schools, here::here('data/schools.gpkg'))
+public_school_names <- c(
+  "Jackson Street School",
+  "Robert K. Finn Ryan Road Elementary School",
+  "John F. Kennedy Middle School",
+  "Leeds Elementary School",
+  "Bridge St School",
+  "Smith Vocational and Agricultural High School",
+  "Northampton High School"
+)
+
+# schools = st_read(here::here('data/schools.gpkg')) |>
+#   mutate(is_public = name %in% public_school_names)
+# st_write(schools, here::here('data/schools.gpkg'), delete_dsn = TRUE)
 schools = st_read(here::here('data/schools.gpkg'))
 
 mapview(schools, zcol='name')
 
-public_schools = schools |> 
-  filter(name %in% c("Jackson Street School", 
-                     "Robert K. Finn Ryan Road Elementary School",
-                     "John F. Kennedy Middle School", 
-                     "Leeds Elementary School", 
-                     "Bridge St School", 
-                     "Smith Vocational and Agricultural High School", 
-                     "Northampton High School"
-))
+public_schools = schools |> filter(is_public)
 
 school_districts = 
   read_sf(here::here('data/School_Districts_2015/School_Districts_2015.shp')) |> 

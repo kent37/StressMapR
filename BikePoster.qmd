@@ -27,15 +27,7 @@ flows <- st_read(here("data/stress_flows.gpkg"), layer = "stress_flows", quiet =
 hex_centers  <- st_read(here("data/stress_flows.gpkg"), layer = "hex_centers", quiet = TRUE)
 destinations <- st_read(here("data/destinations.gpkg"), quiet = TRUE)
 schools <- st_read(here("data/schools.gpkg"), quiet = TRUE) |>
-  filter(name %in% c(
-    "Jackson Street School",
-    "Robert K. Finn Ryan Road Elementary School",
-    "John F. Kennedy Middle School",
-    "Leeds Elementary School",
-    "Bridge St School",
-    "Smith Vocational and Agricultural High School",
-    "Northampton High School"
-  ))
+  filter(is_public)
 noho_outline <- read_sf(here("../Noho/Shapefiles/Noho_outline/Noho_outline.gpkg"))
 
 tmap_mode("plot")
