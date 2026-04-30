@@ -13,8 +13,8 @@ potential <- read_sf("../StressMap/plots/Northampton_LTS.gpkg",
   st_zm() |> # Drop M dimension
   st_transform(st_crs(stress))
 
-isochrones <- read_sf(here::here('isochrones.gpkg'), 
-         layer='isochrones')
+isochrones <- read_sf(here::here('isochrones.gpkg'),
+         layer='city_centers_5_12_20')
 
 # Define color mapping for Potential values (continuous viridis palette)
 # Use quantile-based coloring to handle skewed distribution
