@@ -104,15 +104,15 @@ mapview(pop_by_hex |> filter(density >= 4000), zcol='density') +
 #   st_as_sf(coords=c('lon', 'lat'), crs=4326)
 # Allow editing of the schools to put the location near the entrances
 #st_write(schools, here::here('data/schools.gpkg'))
-public_school_names <- c(
-  "Jackson Street School",
-  "Robert K. Finn Ryan Road Elementary School",
-  "John F. Kennedy Middle School",
-  "Leeds Elementary School",
-  "Bridge St School",
-  "Smith Vocational and Agricultural High School",
-  "Northampton High School"
-)
+# public_school_names <- c(
+#   "Jackson Street School",
+#   "Robert K. Finn Ryan Road Elementary School",
+#   "John F. Kennedy Middle School",
+#   "Leeds Elementary School",
+#   "Bridge St School",
+#   "Smith Vocational and Agricultural High School",
+#   "Northampton High School"
+# )
 
 # schools = st_read(here::here('data/schools.gpkg')) |>
 #   mutate(is_public = name %in% public_school_names)
@@ -195,29 +195,36 @@ mapview(hex_centers,        col.regions = "lightblue", cex = 4, layer.name = "He
 mapview(public_schools,     col.regions = "red",       cex = 6, layer.name = "Schools") +
 mapview(destinations,       col.regions = "green",     cex = 6, layer.name = "Destinations")
 
-# Build OD matrix: hex centroids to schools, weighted by population
+# Build OD matrix: origins scoped by 12-minute isochrone per destination.
+# Elementary schools additionally require the origin to be within the attendance district.
+school_iso <- st_read(here::here('isochrones.gpkg'), layer = 'schools_12', quiet = TRUE) |>
+  st_transform(st_crs(pop_by_hex))
+dest_iso   <- st_read(here::here('isochrones.gpkg'), layer = 'destinations_12', quiet = TRUE) |>
+  st_transform(st_crs(pop_by_hex))
+
+# Hex centroids whose polygon intersects iso; optionally restricted to allowed_cells
+hexes_in_iso <- function(iso, allowed_cells = NULL) {
+  in_iso <- lengths(st_intersects(pop_by_hex, iso)) > 0
+  cells  <- pop_by_hex$cell_id[in_iso]
+  if (!is.null(allowed_cells)) cells <- intersect(cells, allowed_cells)
+  hex_centers |>
+    filter(cell_id %in% cells) |>
+    st_drop_geometry() |>
+    select(hex_node, people_count)
+}
+
 secondary_names <- c(
   "Northampton High School",
   "Smith Vocational and Agricultural High School",
   "John F. Kennedy Middle School"
 )
 
-# Assign each hex centroid to a school district
+# Cell IDs per attendance district, used to scope elementary origins
 hex_districts <- hex_centers |>
   st_join(school_districts) |>
   st_drop_geometry() |>
-  select(hex_node, people_count, district_name = Name)
+  select(cell_id, district_name = Name)
 
-# OD pairs: secondary schools (all hexes as origins)
-od_secondary <- public_schools |>
-  filter(name %in% secondary_names) |>
-  st_drop_geometry() |>
-  cross_join(hex_centers |>
-               st_drop_geometry() |>
-               select(hex_node, people_count)) |>
-  transmute(from = hex_node, to = school_node, flow = people_count)
-
-# OD pairs: elementary schools (only hexes in matching district)
 elementary_district_map <- tribble(
   ~school_name,                                        ~district_name,
   "Jackson Street School",                             "Jackson St",
@@ -226,20 +233,29 @@ elementary_district_map <- tribble(
   "Bridge St School",                                  "Bridge St"
 )
 
-od_elementary <- public_schools |>
-  filter(!name %in% secondary_names) |>
-  st_drop_geometry() |>
-  left_join(elementary_district_map, by = c("name" = "school_name")) |>
-  left_join(hex_districts, by = "district_name", relationship = "many-to-many") |>
-  transmute(from = hex_node, to = school_node, flow = people_count)
+# OD pairs: secondary schools — origins within isochrone only
+od_secondary <- map(which(public_schools$name %in% secondary_names), \(i) {
+  school <- public_schools[i, ]
+  hexes_in_iso(school_iso |> filter(center == school$name)) |>
+    transmute(from = hex_node, to = school$school_node, flow = people_count)
+}) |> bind_rows()
 
-# OD pairs: all hex centroids to all non-school destinations
-od_destinations <- destinations |>
-  st_drop_geometry() |>
-  cross_join(hex_centers |>
-               st_drop_geometry() |>
-               select(hex_node, people_count)) |>
-  transmute(from = hex_node, to = dest_node, flow = people_count)
+# OD pairs: elementary schools — origins within both district and isochrone
+od_elementary <- map(which(!public_schools$name %in% secondary_names), \(i) {
+  school         <- public_schools[i, ]
+  dname          <- elementary_district_map$district_name[
+                      elementary_district_map$school_name == school$name]
+  district_cells <- hex_districts$cell_id[hex_districts$district_name == dname]
+  hexes_in_iso(school_iso |> filter(center == school$name), district_cells) |>
+    transmute(from = hex_node, to = school$school_node, flow = people_count)
+}) |> bind_rows()
+
+# OD pairs: destinations — origins within isochrone only
+od_destinations <- map(seq_len(nrow(destinations)), \(i) {
+  dest <- destinations[i, ]
+  hexes_in_iso(dest_iso |> filter(center == dest$name)) |>
+    transmute(from = hex_node, to = dest$dest_node, flow = people_count)
+}) |> bind_rows()
 
 # Combine all OD pairs and remove self-loops and invalid rows
 od_matrix <- bind_rows(od_secondary, od_elementary, od_destinations) |>
@@ -309,14 +325,24 @@ mapview(
   layer.name = "Weighted flow"
 )
 
+# find the segments that account for the top 10% (or other percent) of flows
+top_flow_pct <- function(df, col, pct = 0.10) {
+  df |>                              
+    filter(!is.na({{col}}), {{ col }} > 0) |>
+    arrange(desc({{ col }})) |>                                       
+    mutate(cumulative_pct = cumsum({{ col }}) / sum({{ col }})) |>          
+    filter(lag(cumulative_pct, default = 0) < pct)
+}                                                                                                              
+
 # How much flow is sill on high stress streets, even with high avoidance?
-high_stress_flows = stress_with_flows |> filter(flow_lts > 1600, LTS >=3)
+high_stress_flows = stress_with_flows |> filter(LTS >=3, flow_lts >= 350)
+
 mapview(
   high_stress_flows,
   zcol       = "flow_lts",
   lwd        = 3,
-  at = classIntervals(high_stress_flows$flow_lts, n = 8, style = "quantile")$brks,
-
+  at = classIntervals(high_stress_flows$flow_lts, n = 8, 
+                      style = "quantile")$brks,
   layer.name = "Unavoidable stress"
 )
 
@@ -361,7 +387,7 @@ mapview(
 candidates = stress_with_flows |> 
   filter((flow_delta < 0 | flow_lts > 0) & LTS >=3) |> 
   mutate(score = pmax(-flow_delta, flow_lts))
-mapview(candidates |> filter(score>15000), zcol='score',
+mapview(candidates |> filter(score>5000), zcol='score',
         layer.name='Avoided or unavoidable') +
 mapview(public_schools,     col.regions = "red",       cex = 6, layer.name = "Schools") +
 mapview(destinations,       col.regions = "green",     cex = 6, layer.name = "Destinations")
@@ -414,7 +440,7 @@ stress_detour <- stress_graph |>
   left_join(stress |> select(id, geom), by = "id") |>
   st_as_sf()
 
-mapview(stress_detour |> filter(detour_burden>=1000000), zcol = "detour_burden", lwd = 3, layer.name = "Detour burden")
+mapview(stress_detour |> filter(detour_burden>=150000), zcol = "detour_burden", lwd = 3, layer.name = "Detour burden")
 
 # Add detour_burden to stress_with_flows and save for scrollytelling map
 stress_with_flows <- stress_with_flows |>
