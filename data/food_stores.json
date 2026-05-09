@@ -1,0 +1,435 @@
+{
+  "version": 0.6,
+  "generator": "Overpass API 0.7.62.11 87bfad18",
+  "osm3s": {
+    "timestamp_osm_base": "2026-05-09T00:39:10Z",
+    "timestamp_areas_base": "2026-05-08T18:46:00Z",
+    "copyright": "The data included in this document is from www.openstreetmap.org. The data is made available under ODbL."
+  },
+  "elements": [
+
+{
+  "type": "node",
+  "id": 1674679048,
+  "lat": 42.3155678,
+  "lon": -72.6312045,
+  "tags": {
+    "name": "Northampton Market",
+    "shop": "convenience"
+  }
+},
+{
+  "type": "node",
+  "id": 1748023741,
+  "lat": 42.3206083,
+  "lon": -72.6312688,
+  "tags": {
+    "brand": "7-Eleven",
+    "brand:wikidata": "Q259340",
+    "name": "7-Eleven",
+    "shop": "convenience"
+  }
+},
+{
+  "type": "node",
+  "id": 2138609082,
+  "lat": 42.3244145,
+  "lon": -72.6331846,
+  "tags": {
+    "brand": "Cumberland Farms",
+    "brand:wikidata": "Q1143685",
+    "name": "Cumberland Farms",
+    "shop": "convenience"
+  }
+},
+{
+  "type": "node",
+  "id": 2138609087,
+  "lat": 42.3193625,
+  "lon": -72.6341003,
+  "tags": {
+    "addr:city": "Northampton",
+    "addr:housenumber": "51",
+    "addr:postcode": "01060",
+    "addr:state": "MA",
+    "addr:street": "State Street",
+    "fax": "+1-413-586-3753",
+    "name": "State Street Fruit Store",
+    "opening_hours": "Mo-Sa 06:30-20:00; Su 06:30-18:00",
+    "operator": "State Street Fruit Store",
+    "phone": "+1-413-584-2301",
+    "shop": "supermarket",
+    "stroller": "yes",
+    "website": "https://www.statestreetfruit.com/",
+    "wheelchair": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 2565301811,
+  "lat": 42.3350036,
+  "lon": -72.6680437,
+  "tags": {
+    "addr:city": "Florence",
+    "addr:country": "US",
+    "addr:housenumber": "31",
+    "addr:postcode": "01062",
+    "addr:state": "MA",
+    "addr:street": "Main Street",
+    "email": "richcooper@cooperscorner.comcastbiz.net",
+    "fax": "+1-413-584-6607",
+    "internet_access": "no",
+    "level": "0",
+    "name": "Cooper's Corner",
+    "opening_hours": "Mo-Sa 6:00-20:00, Su 6:00-18:00",
+    "operator": "State Street Fruit Store",
+    "payment:cash": "yes",
+    "payment:credit_cards": "yes",
+    "phone": "+1-413-586-1684",
+    "shop": "supermarket",
+    "stroller": "yes",
+    "website": "https://statestreetfruit.com/coopers-corner/",
+    "wheelchair": "yes"
+  }
+},
+{
+  "type": "node",
+  "id": 7285081722,
+  "lat": 42.3087753,
+  "lon": -72.7157904,
+  "tags": {
+    "addr:city": "Florence",
+    "addr:housenumber": "15",
+    "addr:postcode": "01062",
+    "addr:state": "MA",
+    "addr:street": "West Farms Road",
+    "name": "Jim's Variety & Package Store",
+    "opening_hours": "06:00-22:00",
+    "shop": "convenience"
+  }
+},
+{
+  "type": "way",
+  "id": 89376626,
+  "center": {
+    "lat": 42.3478972,
+    "lon": -72.6434008
+  },
+  "nodes": [
+    1036654468,
+    9165310627,
+    9165310626,
+    9165310625,
+    9165310624,
+    9165310623,
+    9165310622,
+    9165310621,
+    1036654464,
+    1625942787,
+    1036654474,
+    9165310631,
+    9165310630,
+    9165310629,
+    9165310628,
+    1036654478,
+    1036654468
+  ],
+  "tags": {
+    "addr:city": "Northampton",
+    "addr:housenumber": "330",
+    "addr:postcode": "01060",
+    "addr:state": "MA",
+    "addr:street": "North King Street",
+    "building": "retail",
+    "building:levels": "2",
+    "check_date:opening_hours": "2025-08-25",
+    "email": "info@rivervalley.coop",
+    "fax": "+1-413-584-2664",
+    "name": "River Valley Co-op",
+    "opening_hours": "Mo-Su 08:00-22:00",
+    "operator": "River Valley Co-op",
+    "organic": "yes",
+    "payment:cash": "yes",
+    "payment:credit_cards": "yes",
+    "payment:debit_cards": "yes",
+    "phone": "+1-413-584-2665",
+    "shop": "supermarket",
+    "stroller": "yes",
+    "url": "https://www.rivervalley.coop",
+    "website": "https://www.rivervalley.coop/our-co-op/location-and-contact",
+    "wheelchair": "yes"
+  }
+},
+{
+  "type": "way",
+  "id": 113727994,
+  "center": {
+    "lat": 42.3290281,
+    "lon": -72.6358628
+  },
+  "nodes": [
+    1720780055,
+    1289258015,
+    1289258266,
+    1289258489,
+    1289258205,
+    1289258108,
+    1289258335,
+    1289258051,
+    1289258428,
+    1289258074,
+    1289258313,
+    1289258027,
+    1289258277,
+    1289258198,
+    1720780055
+  ],
+  "tags": {
+    "addr:city": "Northampton",
+    "addr:housenumber": "228",
+    "addr:postcode": "01060",
+    "addr:state": "MA",
+    "addr:street": "King Street",
+    "brand": "Stop & Shop",
+    "brand:wikidata": "Q3658429",
+    "building": "retail",
+    "check_date": "2024-10-03",
+    "check_date:opening_hours": "2024-10-03",
+    "diet:dairy_free": "yes",
+    "diet:gluten_free": "yes",
+    "diet:kosher": "yes",
+    "diet:local": "yes",
+    "diet:omnivore": "yes",
+    "diet:raw": "yes",
+    "diet:vegan": "yes",
+    "diet:vegetarian": "yes",
+    "name": "Stop & Shop",
+    "opening_hours": "Mo-Sa 07:00-22:00; Su 07:00-21:00",
+    "organic": "yes",
+    "phone": "+1 413-584-9200",
+    "ref": "0787",
+    "shop": "supermarket",
+    "website": "https://stores.stopandshop.com/ma/northampton/228-king-street",
+    "wheelchair": "yes"
+  }
+},
+{
+  "type": "way",
+  "id": 149648974,
+  "center": {
+    "lat": 42.3410097,
+    "lon": -72.6422459
+  },
+  "nodes": [
+    1625941900,
+    1625941857,
+    9165310609,
+    1625941832,
+    1625941739,
+    1625941697,
+    1625941519,
+    9165310607,
+    9165310606,
+    1625941460,
+    1625941643,
+    1625941901,
+    1625941900
+  ],
+  "tags": {
+    "addr:city": "Northampton",
+    "addr:housenumber": "136",
+    "addr:postcode": "01060",
+    "addr:state": "MA",
+    "addr:street": "North King Street",
+    "brand": "Big Y",
+    "brand:wikidata": "Q4906701",
+    "building": "retail",
+    "check_date:opening_hours": "2025-08-25",
+    "diet:gluten_free": "yes",
+    "diet:vegan": "yes",
+    "diet:vegetarian": "yes",
+    "name": "Big Y",
+    "opening_hours": "Mo-Su 07:00-21:00",
+    "operator": "Big Y",
+    "phone": "+1 413-584-6137",
+    "shop": "supermarket",
+    "website": "https://www.bigy.com/rs/storelocator/detail/7"
+  }
+},
+{
+  "type": "way",
+  "id": 149702197,
+  "center": {
+    "lat": 42.3374852,
+    "lon": -72.6366283
+  },
+  "nodes": [
+    1626502822,
+    1626502830,
+    1626502758,
+    1626502751,
+    1626502822
+  ],
+  "tags": {
+    "addr:city": "Northampton",
+    "addr:country": "US",
+    "addr:housenumber": "375",
+    "addr:state": "MA",
+    "addr:street": "King Street",
+    "building": "retail",
+    "name": "Pride",
+    "shop": "convenience"
+  }
+},
+{
+  "type": "way",
+  "id": 151119475,
+  "center": {
+    "lat": 42.3316796,
+    "lon": -72.6526253
+  },
+  "nodes": [
+    1639616069,
+    1639615998,
+    8952586811,
+    8952586810,
+    1639615905,
+    1639615650,
+    1639615796,
+    1639616069
+  ],
+  "tags": {
+    "addr:city": "Northampton",
+    "addr:housenumber": "15",
+    "addr:postcode": "01060",
+    "addr:state": "MA",
+    "addr:street": "Locust Street",
+    "building": "yes",
+    "name": "Zee-Mart",
+    "opening_hours": "Mo-Su 05:00-23:00",
+    "payment:cash": "yes",
+    "payment:credit_cards": "yes",
+    "phone": "+1-413-586-5479",
+    "shop": "convenience",
+    "website": "https://www.exxon.com/en/find-station/mobil-northampton-ma-zeemart-200324060"
+  }
+},
+{
+  "type": "way",
+  "id": 151176386,
+  "center": {
+    "lat": 42.3622538,
+    "lon": -72.6390619
+  },
+  "nodes": [
+    1640026825,
+    1640026808,
+    1640026813,
+    1640026822,
+    1640026825
+  ],
+  "tags": {
+    "addr:housenumber": "776",
+    "addr:street": "North King Street",
+    "building": "retail",
+    "name": "Sandri",
+    "shop": "convenience"
+  }
+},
+{
+  "type": "way",
+  "id": 155253857,
+  "center": {
+    "lat": 42.3493587,
+    "lon": -72.6902509
+  },
+  "nodes": [
+    1676631321,
+    1676631309,
+    1676631286,
+    1676631300,
+    1676631306,
+    1676631308,
+    1676631322,
+    1676631317,
+    1676631321
+  ],
+  "tags": {
+    "addr:city": "Leeds",
+    "addr:housenumber": "430",
+    "addr:postcode": "01053",
+    "addr:state": "MA",
+    "addr:street": "North Main Street",
+    "building": "retail",
+    "name": "Singh Brothers' Leeds Sunoco",
+    "phone": "+1-413-584-9663",
+    "shop": "convenience"
+  }
+},
+{
+  "type": "way",
+  "id": 213939531,
+  "center": {
+    "lat": 42.3340034,
+    "lon": -72.6342319
+  },
+  "nodes": [
+    2235850735,
+    2235850734,
+    12780022608,
+    12780022609,
+    12780022610,
+    12780022611,
+    2235850738,
+    2235850736,
+    2235850735
+  ],
+  "tags": {
+    "brand": "Aldi",
+    "brand:wikidata": "Q41171672",
+    "building": "yes",
+    "name": "Aldi",
+    "shop": "supermarket"
+  }
+},
+{
+  "type": "way",
+  "id": 780223635,
+  "center": {
+    "lat": 42.3353156,
+    "lon": -72.6693054
+  },
+  "nodes": [
+    7285185557,
+    7285185558,
+    8728642209,
+    8728642208,
+    8816101347,
+    8728642207,
+    8728642206,
+    7285185559,
+    7285185560,
+    7285185557
+  ],
+  "tags": {
+    "addr:city": "Florence",
+    "addr:housenumber": "53",
+    "addr:postcode": "01062",
+    "addr:state": "MA",
+    "addr:street": "Main Street",
+    "brand": "Cumberland Farms",
+    "brand:wikidata": "Q1143685",
+    "building": "retail",
+    "name": "Cumberland Farms",
+    "opening_hours": "24/7",
+    "payment:cash": "yes",
+    "payment:credit_cards": "yes",
+    "phone": "+1-413-584-9853",
+    "shop": "convenience",
+    "website": "https://www.cumberlandfarms.com/stores/ma/florence-0129",
+    "wheelchair": "yes"
+  }
+}
+
+  ]
+}

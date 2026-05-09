@@ -134,6 +134,30 @@ population |>
   st_drop_geometry() |> 
   summarize(people_count=sum(people_count), .by=Name)
 
+# Food stores from Overpass Turbo
+# [out:json][timeout:30];
+# area["name"="Northampton"]["wikipedia"="en:Northampton, Massachusetts"]["admin_level"="8"]->.a;
+# (
+#   node["shop"~"supermarket|convenience"](area.a);
+#   way["shop"~"supermarket|convenience"](area.a);
+# );
+# out center body;
+# food_stores_raw <- fromJSON(here::here("data/food_stores.json"))$elements |>
+#   as_tibble()
+# 
+# food_stores = food_stores_raw |>
+#   mutate(
+#     type = tags$shop,
+#     lat = coalesce(lat, center$lat),
+#     lon = coalesce(lon, center$lon),
+#     name = tags$name
+#   ) |>
+#   select(name, type, lat, lon) |>
+#   st_as_sf(coords=c('lon', 'lat'), crs=4326)
+# mapview(food_stores, zcol='name')
+# st_write(food_stores, here::here('data/food_stores.gpkg'), delete_dsn = TRUE)
+# food_stores = st_read(here::here('data/food_stores.gpkg'))
+
 # Make a street graph from the stress data (undirected)
 stress_graph <- linestrings_to_graph(stress, digits = 4,
                                      keep.cols = c('id', 'name', 'LTS'))
@@ -148,7 +172,13 @@ public_schools <- public_schools |>
   mutate(school_node = stress_nodes$node[st_nearest_feature(public_schools, stress_nodes)])
 
 # Load non-school destinations and map to nearest graph nodes
-destinations <- st_read(here::here("data/destinations.gpkg"))
+# Add these convenience stores, they are the closest food for many people
+convenience_names = c("Jim's Variety & Package Store",
+                      "Pride", "Zee-Mart", "Sandri", 
+                      "Singh Brothers' Leeds Sunoco")
+destinations <- st_read(here::here("data/destinations.gpkg")) |> 
+  bind_rows(st_read(here::here("data/food_stores.gpkg")) |> 
+              filter(name %in% convenience_names))
 destinations = destinations |>
   st_transform(st_crs(stress_nodes)) |>
   mutate(dest_node = stress_nodes$node[st_nearest_feature(destinations, stress_nodes)])

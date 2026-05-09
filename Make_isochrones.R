@@ -67,3 +67,12 @@ dest_iso <- iso_from_sf(destinations, 12)
 mapview(dest_iso, zcol='center')
 st_write(dest_iso, here::here('isochrones.gpkg'),
          layer = 'destinations_12', delete_layer = TRUE)
+
+# ── Food stores: 12-minute isochrones ────────────────────────────────────────
+food_stores <- st_read(here::here('data/food_stores.gpkg'), quiet = TRUE)
+
+food_stores_iso <- iso_from_sf(food_stores, 12)
+mapview(food_stores_iso, zcol='center')
+st_write(food_stores_iso, here::here('isochrones.gpkg'),
+         layer = 'food_stores_12', delete_layer = TRUE)
+
