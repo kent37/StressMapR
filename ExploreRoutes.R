@@ -330,7 +330,7 @@ top_flow_pct <- function(df, col, pct = 0.10) {
   df |>                              
     filter(!is.na({{col}}), {{ col }} > 0) |>
     arrange(desc({{ col }})) |>                                       
-    mutate(cumulative_pct = cumsum({{ col }}) / sum({{ col }})) |>          
+    mutate(cumulative_pct = cumsum({{ col }}) / sum({{ col }})) |>
     filter(lag(cumulative_pct, default = 0) < pct)
 }                                                                                                              
 

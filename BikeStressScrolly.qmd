@@ -17,12 +17,20 @@ library(tidyverse)
 library(mapgl)
 library(here)
 
-flows <- st_read(here("data/stress_flows.gpkg"), layer = "stress_flows", quiet = TRUE) |>
+flows <- read_sf(here("data/stress_flows.gpkg"), layer = "stress_flows") |>
   mutate(score = pmax(-coalesce(flow_delta, 0), coalesce(flow_lts, 0)))
 
-hex_centers  <- st_read(here("data/stress_flows.gpkg"), layer = "hex_centers", quiet = TRUE)
-destinations <- st_read(here("data/destinations.gpkg"), quiet = TRUE)
-schools <- st_read(here("data/schools.gpkg"), quiet = TRUE) |>
+hex_centers  <- read_sf(here("data/stress_flows.gpkg"), 
+                        layer = "hex_centers")
+
+convenience_names = c("Jim's Variety & Package Store",
+                      "Pride", "Zee-Mart", "Sandri", 
+                      "Singh Brothers' Leeds Sunoco")
+destinations <- read_sf(here::here("data/destinations.gpkg")) |> 
+  bind_rows(read_sf(here::here("data/food_stores.gpkg")) |> 
+              filter(name %in% convenience_names))
+
+schools <- read_sf(here("data/schools.gpkg")) |>
   filter(is_public)
 ```
 
@@ -206,11 +214,11 @@ maplibre(
     "unweighted-flow", source = "src-unweighted",
     line_color = interpolate(
       column = "flow_unweighted",
-      values = c(100, 5000, 80000),
+      values = c(100, 3000, 50000),
       stops  = c("#fee5d9", "#fc4e2a", "#800026")),
     line_width = interpolate(
       column = "flow_unweighted",
-      values = c(100, 80000),
+      values = c(10, 50000),
       stops  = c(1, 6)),
     line_opacity = 0,
     visibility   = "none"
@@ -232,7 +240,7 @@ maplibre(
   ) |>
   # Unavoidable high-stress segments (initially hidden)
   add_source("src-unavoidable", 
-             flows |> filter(flow_lts >= 1600, LTS >= 3)) |>
+             flows |> filter(flow_lts >= 350, LTS >= 3)) |>
   add_line_layer(
     "unavoidable-stress", source = "src-unavoidable",
     line_color = "#c0392b",
@@ -245,30 +253,14 @@ maplibre(
   ) |>
   # Avoided-or-unavoidable (initially hidden)
   add_source("src-avoided",
-    flows |> filter((flow_delta < 0 | flow_lts > 0) & LTS >= 3, score>=15000)) |>
+    flows |> filter((flow_delta < 0 | flow_lts > 0) & LTS >= 3, score>=4000)) |>
   add_line_layer(
     "avoided-unavoidable", source = "src-avoided",
     line_color = interpolate(
       column = "score",
-      values = c(15000, 30000, 80000),
+      values = c(4000, 10000, 50000),
       stops  = c("#fee090", "#f46d43", "#a50026")),
     line_width   = 2.5,
-    line_opacity = 0,
-    visibility   = "none"
-  ) |>
-  # Detour burden (initially hidden)
-  add_source("src-detour",
-    flows |> filter(!is.na(detour_burden), detour_burden >= 1e6)) |>
-  add_line_layer(
-    "detour-burden", source = "src-detour",
-    line_color = interpolate(
-      column = "detour_burden",
-      values = c(1e6, 2e6, 5e6),
-      stops  = c("#fd8d3c", "#e31a1c", "#67000d")),
-    line_width = interpolate(
-      column = "detour_burden",
-      values = c(1e6, 5e7),
-      stops  = c(2, 7)),
     line_opacity = 0,
     visibility   = "none"
   )
@@ -307,9 +299,9 @@ maplibre(
       <p>Beyond schools, people travel to libraries, the YMCA, grocery stores,
       parks, downtown shops, and medical facilities (shown in green). These are
       the places a connected cycling network should reliably reach.</p>
-      <p>Together, schools and other destinations give us roughly 23,000 origin-
-      destination pairs — one for every population cell and destination
-      combination.</p>
+      <p>Together, schools and other destinations give us roughly 9,000
+      origin-destination pairs — one for every population cell and
+      destination combination.</p>
     </section>
 
     <section class="story-section" data-section="unweighted">
@@ -351,15 +343,6 @@ maplibre(
       the places where investment would have the largest effect on ridership.</p>
     </section>
 
-    <section class="story-section" data-section="detour">
-      <h2>The Cost of Stress</h2>
-      <p>The final map shows <em>detour burden</em>: for each street segment, the
-      total extra distance that all cyclists collectively ride because of it.
-      Red segments, if made safer, would eliminate the most cumulative detour.</p>
-      <p>This is where infrastructure investment pays off most broadly — not just
-      for one neighborhood, but across the city.</p>
-    </section>
-
   </div><!-- /text-panel -->
 </div><!-- /story-wrapper -->
 
@@ -374,7 +357,7 @@ maplibre(
   each about 500 feet (150 meters) on a side — on Northampton and found the
   population-weighted center of each occupied cell. We then identified seven
   public schools and dozens of everyday destinations across the city.</p>
-  <p>For each of the roughly 23,000 origin-destination pairs, we
+  <p>For each of the origin-destination pairs, we
   calculated two routes:</p>
   <ol>
     <li><strong>The shortest route by distance</strong> — as if cyclists could
@@ -406,8 +389,7 @@ maplibre(
     'unweighted-flow':      0.8,
     'weighted-flow':        0.8,
     'unavoidable-stress':   0.9,
-    'avoided-unavoidable':  0.85,
-    'detour-burden':        0.9
+    'avoided-unavoidable':  0.85
   };
 
   // Paint property name for opacity, keyed by layer type
@@ -452,8 +434,7 @@ maplibre(
   // Which layers are shown/hidden for each scroll section
   var ALL_LAYERS = ['hex-centers', 'schools-layer', 'destinations-layer',
                     'schools-small', 'destinations-small', 'unweighted-flow',
-                    'weighted-flow', 'unavoidable-stress', 'avoided-unavoidable',
-                    'detour-burden'];
+                    'weighted-flow', 'unavoidable-stress', 'avoided-unavoidable'];
 
   function sectionConfig(show) {
     return { show: show, hide: ALL_LAYERS.filter(function(l) { return show.indexOf(l) === -1; }) };
@@ -466,8 +447,7 @@ maplibre(
     'unweighted':  sectionConfig(['unweighted-flow', 'schools-small', 'destinations-small']),
     'weighted':    sectionConfig(['weighted-flow',   'schools-small', 'destinations-small']),
     'unavoidable': sectionConfig(['unavoidable-stress', 'schools-small', 'destinations-small']),
-    'avoided':     sectionConfig(['avoided-unavoidable', 'schools-small', 'destinations-small']),
-    'detour':      sectionConfig(['detour-burden', 'schools-small', 'destinations-small'])
+    'avoided':     sectionConfig(['avoided-unavoidable', 'schools-small', 'destinations-small'])
   };
 
   function activateSection(map, sectionId) {
