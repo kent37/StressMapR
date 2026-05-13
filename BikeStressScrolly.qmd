@@ -214,11 +214,11 @@ maplibre(
     "unweighted-flow", source = "src-unweighted",
     line_color = interpolate(
       column = "flow_unweighted",
-      values = c(100, 3000, 50000),
+      values = c(100, 1500, 30000),
       stops  = c("#fee5d9", "#fc4e2a", "#800026")),
     line_width = interpolate(
       column = "flow_unweighted",
-      values = c(10, 50000),
+      values = c(100, 30000),
       stops  = c(1, 6)),
     line_opacity = 0,
     visibility   = "none"
@@ -229,11 +229,11 @@ maplibre(
     "weighted-flow", source = "src-weighted",
     line_color = interpolate(
       column = "flow_lts",
-      values = c(100, 5000, 80000),
+      values = c(100, 2000, 40000),
       stops  = c("#d1e5f0", "#4393c3", "#053061")),
     line_width = interpolate(
       column = "flow_lts",
-      values = c(100, 80000),
+      values = c(100, 40000),
       stops  = c(1, 6)),
     line_opacity = 0,
     visibility   = "none"
@@ -246,7 +246,7 @@ maplibre(
     line_color = "#c0392b",
     line_width = interpolate(
       column = "flow_lts",
-      values = c(100, 80000),
+      values = c(100, 25000),
       stops  = c(1.5, 7)),
     line_opacity = 0,
     visibility   = "none"
@@ -258,7 +258,7 @@ maplibre(
     "avoided-unavoidable", source = "src-avoided",
     line_color = interpolate(
       column = "score",
-      values = c(4000, 10000, 50000),
+      values = c(4000, 12000, 32000),
       stops  = c("#fee090", "#f46d43", "#a50026")),
     line_width   = 2.5,
     line_opacity = 0,
